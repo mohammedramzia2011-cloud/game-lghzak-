@@ -82,6 +82,19 @@
 
       <!-- 2. HOME -->
       <section id="screen-home" class="hidden p-4 space-y-4 pb-20">
+        
+        <!-- لافتة تسجيل الدخول البارزة للزوار (جديد) -->
+        <div id="home-login-banner" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-brand-500/50 relative overflow-hidden bg-brand-900/20">
+           <div class="flex items-center gap-3 relative z-10">
+              <span class="text-3xl">🛡️</span>
+              <div>
+                 <h3 class="text-xs font-black text-amber-300">احفظ تقدمك الآن!</h3>
+                 <p class="text-[10px] text-gray-300 font-bold">سجل دخولك لتأمين حسابك.</p>
+              </div>
+           </div>
+           <button onclick="openAuthModal()" class="btn-3d-orange px-4 py-2 rounded-xl text-xs font-black relative z-10">دخول</button>
+        </div>
+
         <div id="global-update-banner" class="hidden glass-card p-3 rounded-2xl flex items-center justify-between border border-cyan-500/50 relative overflow-hidden bg-cyan-900/40">
            <div class="flex items-center gap-3 relative z-10">
               <span class="text-3xl animate-pulse">📢</span>
@@ -229,9 +242,21 @@
           <div class="glass-card p-3 rounded-2xl border border-white/10 overflow-hidden"><span class="text-[10px] text-gray-400 font-bold block">حساب</span><span id="profile-email-text" class="text-[9px] font-black text-purple-300 block truncate">زائر</span></div>
         </div>
 
-        <!-- أزرار الإدارة وتسجيل الدخول -->
+        <!-- أزرار الإدارة وتسجيل الدخول المحمية في HTML -->
         <div class="glass-card p-4 rounded-3xl border border-brand-500/30 space-y-3 mt-3">
-          <div id="auth-buttons-container" class="flex flex-col gap-2"></div>
+          
+          <div id="auth-guest-section" class="flex flex-col gap-2">
+              <button onclick="openAuthModal()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow-lg">
+                  <i class="fa-solid fa-user-plus"></i> تسجيل الدخول / إنشاء حساب
+              </button>
+          </div>
+          
+          <div id="auth-logged-section" class="hidden flex flex-col gap-2">
+              <button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg">
+                  <i class="fa-solid fa-right-from-bracket text-base"></i> تسجيل الخروج
+              </button>
+          </div>
+
           <div id="owner-admin-btn-container" class="hidden pt-2 border-t border-white/10">
               <button onclick="navigateTo('admin')" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-lg"><span>👑 لوحة تحكم المالك العام</span></button>
           </div>
@@ -353,10 +378,10 @@
           </div>
         </div>
 
-        <!-- Danger Tab (البحث والإدارة) -->
+        <!-- Danger Tab -->
         <div id="admin-sec-danger" class="hidden space-y-3">
           <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-3">
-            <h3 class="text-xs font-black text-cyan-300">بحث عن لاعبين (يمكنك الدخول للحساب وحظره)</h3>
+            <h3 class="text-xs font-black text-cyan-300">بحث عن لاعبين (تعديل وحظر)</h3>
             <div class="flex gap-2"><input type="text" id="adm-search-input" placeholder="اسم اللاعب..." class="flex-1 bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" /><button onclick="adminSearchUsers()" class="btn-3d-purple px-4 rounded-xl text-xs font-black">بحث</button></div>
             <div id="adm-search-results" class="space-y-2 max-h-60 overflow-y-auto"></div>
           </div>
