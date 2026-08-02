@@ -2,6 +2,7 @@ const OWNER_EMAIL = "mohammedabudayya2011@gmail.com";
 let screenHistory = ['home'], allUsers = [], dbWorlds = [], dbLevels = [], dbShopItems = [], dbCodes = [], dbCrates = [];
 window.appSettings = {}; 
 window.isUserBannedLocally = false;
+window.listenersActive = false; // لمنع التكرار وتسريع اللعبة
 
 let defaultPlayer = {
   uid: '', email: '', name: 'زائر', 
@@ -112,12 +113,19 @@ window.loadPlayerData = async (user) => {
        player = { ...defaultPlayer, uid: user.uid, email: user.email || '', name: newName, accLevel: 1 };
        await window.setDoc(userRef, player);
     }
-    player.isOwner = (user.email === OWNER_EMAIL);
-    updateUI(); window.updateUIForAuth();
-  } catch (error) { showToast("خطأ في جلب البيانات", "❌", "error"); }
+  } catch (error) { 
+      player.uid = user.uid; player.email = user.email || '';
+  }
+  
+  player.isOwner = (player.email === OWNER_EMAIL);
+  updateUI(); 
+  window.updateUIForAuth();
 };
 
 window.setupRealtimeListeners = () => {
+  if(window.listenersActive) return;
+  window.listenersActive = true;
+
   window.onSnapshot(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), (docSnap) => {
      if(docSnap.exists()){ window.appSettings = docSnap.data(); applyGlobalSettings(); }
   });
@@ -182,7 +190,7 @@ function applyGlobalSettings() {
     } else { if(updBanner) updBanner.classList.add('hidden'); }
 }
 
-// دالة التحكم بأزرار تسجيل الدخول (تم تقويتها لتظهر دائماً)
+// دالة أزرار التسجيل (تم حل المشكلة جذرياً هنا)
 window.updateUIForAuth = () => {
   const guestSec = document.getElementById('auth-guest-section');
   const loggedSec = document.getElementById('auth-logged-section');
@@ -190,17 +198,17 @@ window.updateUIForAuth = () => {
   const adminBtn = document.getElementById('owner-admin-btn-container');
   const homeLoginBanner = document.getElementById('home-login-banner');
   
-  const isLogged = window.currentUserId && player.email && player.email !== '';
+  const isLogged = window.currentUserId ? true : false;
   
   if (isLogged) {
       if(guestSec) guestSec.classList.add('hidden');
       if(loggedSec) loggedSec.classList.remove('hidden');
-      if(emailText) emailText.innerText = player.email;
+      if(emailText) emailText.innerText = player.email || player.name || 'حساب زائر';
       if(homeLoginBanner) homeLoginBanner.classList.add('hidden');
   } else {
       if(guestSec) guestSec.classList.remove('hidden');
       if(loggedSec) loggedSec.classList.add('hidden');
-      if(emailText) emailText.innerText = 'زائر مؤقت';
+      if(emailText) emailText.innerText = 'غير مسجل';
       if(homeLoginBanner) homeLoginBanner.classList.remove('hidden');
   }
   
@@ -280,16 +288,24 @@ async function savePlayer() {
 }
 
 async function handleEmailLogin() {
-  const email = document.getElementById('auth-email-input').value, pass = document.getElementById('auth-pass-input').value;
+  const email = document.getElementById('auth-email-input').value.trim();
+  const pass = document.getElementById('auth-pass-input').value;
   if(!email || !pass) return showToast("أدخل البيانات", "⚠️", "error");
-  try { await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass); closeModal('modal-auth'); showToast("مرحباً بك", "✅", "success"); } 
-  catch (e) {
-     if(e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
-         try { await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass); closeModal('modal-auth'); showToast("تم إنشاء الحساب", "✅", "success"); } catch(err) { showToast("خطأ", "❌", "error"); }
-     } else showToast("خطأ بالبيانات", "❌", "error");
+  try { 
+      await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass); 
+      closeModal('modal-auth'); 
+      showToast("تم تسجيل الدخول", "✅", "success"); 
+  } catch (e) {
+      try { 
+          await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass); 
+          closeModal('modal-auth'); 
+          showToast("تم إنشاء حساب جديد بنجاح", "✅", "success"); 
+      } catch(err) { 
+          showToast("الرقم السري خاطئ أو البريد مستخدم", "❌", "error"); 
+      }
   }
 }
-async function handleGoogleLogin() { try { const provider = new window.GoogleAuthProvider(); await window.signInWithPopup(window.firebaseAuth, provider); closeModal('modal-auth'); showToast("مرحباً بك", "✅", "success"); } catch(e) { showToast("فشل", "❌", "error"); } }
+async function handleGoogleLogin() { try { const provider = new window.GoogleAuthProvider(); await window.signInWithPopup(window.firebaseAuth, provider); closeModal('modal-auth'); showToast("تم الدخول بنجاح", "✅", "success"); } catch(e) { showToast("فشل", "❌", "error"); } }
 async function handleAnonymousLogin() { try { await window.signInAnonymously(window.firebaseAuth); closeModal('modal-auth'); showToast("دخلت كزائر", "✅", "success"); } catch(e) { showToast("خطأ", "❌", "error"); } }
 async function handleLogout() { try { await window.signOut(window.firebaseAuth); showToast("وداعاً", "👋", "success"); window.location.reload(); } catch(e) {} }
 
