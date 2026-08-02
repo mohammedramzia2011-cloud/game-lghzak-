@@ -424,12 +424,17 @@
   </div>
 
   <!-- FIREBASE IMPORTS -->
+ <!-- 1. استدعاء ملف الأكواد أولاً بدون كلمة defer لضمان قراءته قبل الفايربيس -->
+  <script src="app.js"></script>
+
+  <!-- 2. الفايربيس وإعداداتك الصحيحة -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
     import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    // إعدادات فايربيس الخاصة بك (تم التأكد منها)
     const firebaseConfig = {
       apiKey: "AIzaSyCuRvU6LFqDtIAGDbKFqiv4MceF9RXZSmc",
       authDomain: "lghzak-game.firebaseapp.com",
@@ -469,24 +474,53 @@
     window.DB_PATH = `artifacts/${appId}/public/data/`;
 
     onAuthStateChanged(auth, async (user) => {
-      if (user) { 
-        window.currentUserId = user.uid; 
-        await window.loadPlayerData(user); 
-        window.setupRealtimeListeners(); 
-      } else { 
-        window.currentUserId = null; 
-        window.resetPlayerData(); 
+      try {
+          if (user) { 
+            window.currentUserId = user.uid; 
+            // التأكد من وجود الدالة قبل استدعائها لتجنب الخطأ
+            if(window.loadPlayerData) await window.loadPlayerData(user); 
+            if(window.setupRealtimeListeners) window.setupRealtimeListeners(); 
+          } else { 
+            window.currentUserId = null; 
+            if(window.resetPlayerData) window.resetPlayerData(); 
+          }
+          if(window.updateUIForAuth) window.updateUIForAuth();
+      } catch (error) {
+          console.error("Firebase Error:", error);
+      } finally {
+          // هذا الكود سيعمل دائماً (سواء نجح الفايربيس أو فشل)
+          setTimeout(() => {
+              const splashScreen = document.getElementById('screen-splash');
+              if (splashScreen) {
+                  splashScreen.classList.add('hidden');
+              }
+              if (window.isUserBannedLocally) {
+                  return; // إذا كان محظوراً، ابقَ في شاشة الحظر
+              }
+              if (window.navigateTo) {
+                  window.navigateTo('home');
+              } else {
+                  // فتح الرئيسية إجبارياً في حال عدم استجابة ملف الجافاسكريبت
+                  document.getElementById('screen-home').classList.remove('hidden');
+                  document.getElementById('bottom-nav').classList.remove('hidden');
+                  document.getElementById('top-bar').classList.remove('hidden');
+              }
+          }, 800);
       }
-      window.updateUIForAuth();
-      
-      setTimeout(() => {
-          const splashScreen = document.getElementById('screen-splash');
-          if (splashScreen) splashScreen.classList.add('hidden');
-          if(!window.isUserBannedLocally) navigateTo('home');
-      }, 800);
     });
   </script>
-  
-  <script src="app.js" defer></script>
+
+  <!-- 3. كود طوارئ إضافي: تخطي الشاشة بعد 3 ثوانٍ مهما حصل -->
+  <script>
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const splashScreen = document.getElementById('screen-splash');
+            if (splashScreen && !splashScreen.classList.contains('hidden')) {
+                splashScreen.classList.add('hidden');
+                if(window.navigateTo) window.navigateTo('home');
+            }
+        }, 3000);
+    });
+  </script>
 </body>
 </html>
