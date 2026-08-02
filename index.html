@@ -83,7 +83,6 @@
       <!-- 2. HOME -->
       <section id="screen-home" class="hidden p-4 space-y-4 pb-20">
         
-        <!-- لافتة تسجيل الدخول البارزة للزوار (جديد) -->
         <div id="home-login-banner" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-brand-500/50 relative overflow-hidden bg-brand-900/20">
            <div class="flex items-center gap-3 relative z-10">
               <span class="text-3xl">🛡️</span>
@@ -239,18 +238,18 @@
         <div class="grid grid-cols-3 gap-2 text-center mt-3">
           <div class="glass-card p-3 rounded-2xl border border-white/10"><span class="text-[10px] text-gray-400 font-bold block">مرحلة اللغز</span><span id="profile-stat-level" class="text-base font-black text-brand-400">1</span></div>
           <div class="glass-card p-3 rounded-2xl border border-white/10"><span class="text-[10px] text-gray-400 font-bold block">الترتيب 🏆</span><span id="profile-stat-rank" class="text-base font-black text-yellow-400">-</span></div>
-          <div class="glass-card p-3 rounded-2xl border border-white/10 overflow-hidden"><span class="text-[10px] text-gray-400 font-bold block">حساب</span><span id="profile-email-text" class="text-[9px] font-black text-purple-300 block truncate">زائر</span></div>
+          <div class="glass-card p-3 rounded-2xl border border-white/10 overflow-hidden"><span class="text-[10px] text-gray-400 font-bold block">حساب</span><span id="profile-email-text" class="text-[9px] font-black text-purple-300 block truncate">غير مسجل</span></div>
         </div>
 
-        <!-- أزرار الإدارة وتسجيل الدخول المحمية في HTML -->
         <div class="glass-card p-4 rounded-3xl border border-brand-500/30 space-y-3 mt-3">
-          
+          <!-- أزرار الزائر (التسجيل) -->
           <div id="auth-guest-section" class="flex flex-col gap-2">
               <button onclick="openAuthModal()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow-lg">
                   <i class="fa-solid fa-user-plus"></i> تسجيل الدخول / إنشاء حساب
               </button>
           </div>
           
+          <!-- أزرار المسجل (الخروج) -->
           <div id="auth-logged-section" class="hidden flex flex-col gap-2">
               <button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg">
                   <i class="fa-solid fa-right-from-bracket text-base"></i> تسجيل الخروج
@@ -398,7 +397,7 @@
     <div id="modal-auth" class="hidden fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
       <div class="glass-card w-full max-w-xs p-5 rounded-3xl border border-brand-500/40 space-y-3 relative shadow-2xl">
         <button onclick="closeModal('modal-auth')" class="absolute top-3 left-3 text-gray-400 text-xs"><i class="fa-solid fa-xmark text-lg hover:text-white transition"></i></button>
-        <h3 class="text-lg font-black text-brand-400 text-center font-messiri">تسجيل الدخول لحفظ تقدمك</h3>
+        <h3 class="text-lg font-black text-brand-400 text-center font-messiri">تسجيل الدخول</h3>
         
         <button onclick="handleGoogleLogin()" class="w-full bg-white hover:bg-gray-200 text-gray-900 font-black py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg mt-4"><i class="fa-brands fa-google text-red-500 text-base"></i> الدخول باستخدام Google</button>
         
@@ -406,14 +405,14 @@
         
         <input type="email" id="auth-email-input" placeholder="البريد الإلكتروني" class="w-full bg-black/80 border border-white/20 rounded-xl p-3 text-xs text-white outline-none focus:border-brand-500 transition" />
         <input type="password" id="auth-pass-input" placeholder="كلمة المرور" class="w-full bg-black/80 border border-white/20 rounded-xl p-3 text-xs text-white outline-none focus:border-brand-500 transition" />
-        <button onclick="handleEmailLogin()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black mt-2">دخول / إنشاء حساب جديد</button>
+        <button onclick="handleEmailLogin()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black mt-2">دخول / حساب جديد</button>
         
         <div class="relative flex items-center justify-center my-4"><span class="bg-gray-900 text-[10px] text-gray-400 px-3 rounded-full z-10 border border-white/10">التجربة أولاً</span><div class="absolute w-full h-px bg-white/10"></div></div>
         <button onclick="handleAnonymousLogin()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition border border-white/10"><i class="fa-solid fa-user-secret"></i> الدخول كزائر مؤقت</button>
       </div>
     </div>
 
-    <!-- BANNED MODAL (رسالة الحظر) -->
+    <!-- BANNED MODAL -->
     <div id="modal-banned" class="hidden fixed inset-0 z-[300] bg-red-950 flex flex-col items-center justify-center p-6 text-center">
         <span class="text-7xl mb-4">🚫</span>
         <h2 class="text-3xl font-black text-white font-messiri mb-2">حساب محظور</h2>
@@ -524,9 +523,10 @@
           if (user) { 
             window.currentUserId = user.uid; 
             if(window.loadPlayerData) await window.loadPlayerData(user); 
-            if(window.setupRealtimeListeners) window.setupRealtimeListeners(); 
+            if(window.setupRealtimeListeners && !window.listenersActive) window.setupRealtimeListeners(); 
           } else { 
             window.currentUserId = null; 
+            window.listenersActive = false;
             if(window.resetPlayerData) window.resetPlayerData(); 
           }
           if(window.updateUIForAuth) window.updateUIForAuth();
