@@ -242,14 +242,14 @@
         </div>
 
         <div class="glass-card p-4 rounded-3xl border border-brand-500/30 space-y-3 mt-3">
-          <!-- أزرار الزائر (التسجيل) -->
+          <!-- أزرار الزائر (التسجيل) ثابتة ومحمية -->
           <div id="auth-guest-section" class="flex flex-col gap-2">
               <button onclick="openAuthModal()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow-lg">
                   <i class="fa-solid fa-user-plus"></i> تسجيل الدخول / إنشاء حساب
               </button>
           </div>
           
-          <!-- أزرار المسجل (الخروج) -->
+          <!-- أزرار المسجل (الخروج) ثابتة ومحمية -->
           <div id="auth-logged-section" class="hidden flex flex-col gap-2">
               <button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg">
                   <i class="fa-solid fa-right-from-bracket text-base"></i> تسجيل الخروج
@@ -397,7 +397,7 @@
     <div id="modal-auth" class="hidden fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
       <div class="glass-card w-full max-w-xs p-5 rounded-3xl border border-brand-500/40 space-y-3 relative shadow-2xl">
         <button onclick="closeModal('modal-auth')" class="absolute top-3 left-3 text-gray-400 text-xs"><i class="fa-solid fa-xmark text-lg hover:text-white transition"></i></button>
-        <h3 class="text-lg font-black text-brand-400 text-center font-messiri">تسجيل الدخول</h3>
+        <h3 class="text-lg font-black text-brand-400 text-center font-messiri">تسجيل الدخول لحفظ تقدمك</h3>
         
         <button onclick="handleGoogleLogin()" class="w-full bg-white hover:bg-gray-200 text-gray-900 font-black py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg mt-4"><i class="fa-brands fa-google text-red-500 text-base"></i> الدخول باستخدام Google</button>
         
@@ -405,7 +405,7 @@
         
         <input type="email" id="auth-email-input" placeholder="البريد الإلكتروني" class="w-full bg-black/80 border border-white/20 rounded-xl p-3 text-xs text-white outline-none focus:border-brand-500 transition" />
         <input type="password" id="auth-pass-input" placeholder="كلمة المرور" class="w-full bg-black/80 border border-white/20 rounded-xl p-3 text-xs text-white outline-none focus:border-brand-500 transition" />
-        <button onclick="handleEmailLogin()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black mt-2">دخول / حساب جديد</button>
+        <button onclick="handleEmailLogin()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black mt-2">دخول / إنشاء حساب جديد</button>
         
         <div class="relative flex items-center justify-center my-4"><span class="bg-gray-900 text-[10px] text-gray-400 px-3 rounded-full z-10 border border-white/10">التجربة أولاً</span><div class="absolute w-full h-px bg-white/10"></div></div>
         <button onclick="handleAnonymousLogin()" class="w-full bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition border border-white/10"><i class="fa-solid fa-user-secret"></i> الدخول كزائر مؤقت</button>
@@ -518,6 +518,8 @@
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'lghzak_v3';
     window.DB_PATH = `artifacts/${appId}/public/data/`;
 
+    let isInitialLoad = true;
+
     onAuthStateChanged(auth, async (user) => {
       try {
           if (user) { 
@@ -533,23 +535,26 @@
       } catch (error) {
           console.error("Firebase Auth Error:", error);
       } finally {
-          setTimeout(() => {
-              const splashScreen = document.getElementById('screen-splash');
-              if (splashScreen) { splashScreen.classList.add('hidden'); }
-              if (window.isUserBannedLocally) { return; }
-              if (window.navigateTo) {
-                  window.navigateTo('home');
-              } else {
-                  document.getElementById('screen-home').classList.remove('hidden');
-                  document.getElementById('bottom-nav').classList.remove('hidden');
-                  document.getElementById('top-bar').classList.remove('hidden');
-              }
-          }, 800);
+          if (isInitialLoad) {
+              isInitialLoad = false;
+              setTimeout(() => {
+                  const splashScreen = document.getElementById('screen-splash');
+                  if (splashScreen) { splashScreen.classList.add('hidden'); }
+                  if (window.isUserBannedLocally) { return; }
+                  if (window.navigateTo) {
+                      window.navigateTo('home');
+                  } else {
+                      document.getElementById('screen-home').classList.remove('hidden');
+                      document.getElementById('bottom-nav').classList.remove('hidden');
+                      document.getElementById('top-bar').classList.remove('hidden');
+                  }
+              }, 800);
+          }
       }
     });
   </script>
 
-  <!-- كود الإنقاذ النهائي (يمنع تعليق اللعبة للأبد) -->
+  <!-- كود الإنقاذ النهائي -->
   <script>
     window.addEventListener('load', () => {
         setTimeout(() => {
