@@ -39,7 +39,7 @@ function navigateTo(screenId) {
   if(screenId === 'shop') renderShopItems();
   if(screenId === 'crates') renderCrates();
   if(screenId === 'profile') { calculateProfileRank(); updateUI(); window.updateUIForAuth(); }
-  if(screenId === 'home') checkDailyReward();
+  if(screenId === 'home') { checkDailyReward(); window.updateUIForAuth(); }
 }
 
 function goBack() {
@@ -178,34 +178,41 @@ function applyGlobalSettings() {
     const updBanner = document.getElementById('global-update-banner');
     if(window.appSettings.updateMsg && window.appSettings.updateMsg.trim() !== "") {
         document.getElementById('global-update-text').innerText = window.appSettings.updateMsg;
-        updBanner.classList.remove('hidden');
-    } else { updBanner.classList.add('hidden'); }
+        if(updBanner) updBanner.classList.remove('hidden');
+    } else { if(updBanner) updBanner.classList.add('hidden'); }
 }
 
-// دالة واجهة أزرار التسجيل (تم الحماية والتأكد من إظهار الزر دائماً)
+// دالة التحكم بأزرار تسجيل الدخول (تم تقويتها لتظهر دائماً)
 window.updateUIForAuth = () => {
-  const container = document.getElementById('auth-buttons-container');
+  const guestSec = document.getElementById('auth-guest-section');
+  const loggedSec = document.getElementById('auth-logged-section');
   const emailText = document.getElementById('profile-email-text');
   const adminBtn = document.getElementById('owner-admin-btn-container');
+  const homeLoginBanner = document.getElementById('home-login-banner');
   
-  if(container) {
-      if (window.currentUserId && player.email && player.email !== '') {
-        if(emailText) emailText.innerText = player.email;
-        container.innerHTML = `<button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg"><i class="fa-solid fa-right-from-bracket text-base"></i> تسجيل الخروج</button>`;
-      } else {
-        if(emailText) emailText.innerText = 'زائر مؤقت';
-        // الزر أصبح بارزاً ومضمون الظهور هنا
-        container.innerHTML = `<button onclick="openAuthModal()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow-lg"><i class="fa-solid fa-user-plus"></i> تسجيل الدخول / إنشاء حساب</button>`;
-      }
+  const isLogged = window.currentUserId && player.email && player.email !== '';
+  
+  if (isLogged) {
+      if(guestSec) guestSec.classList.add('hidden');
+      if(loggedSec) loggedSec.classList.remove('hidden');
+      if(emailText) emailText.innerText = player.email;
+      if(homeLoginBanner) homeLoginBanner.classList.add('hidden');
+  } else {
+      if(guestSec) guestSec.classList.remove('hidden');
+      if(loggedSec) loggedSec.classList.add('hidden');
+      if(emailText) emailText.innerText = 'زائر مؤقت';
+      if(homeLoginBanner) homeLoginBanner.classList.remove('hidden');
   }
   
   if(adminBtn) {
       if (isOwner()) { 
           adminBtn.classList.remove('hidden'); 
-          document.getElementById('header-owner-badge').classList.remove('hidden'); 
+          const badge = document.getElementById('header-owner-badge');
+          if(badge) badge.classList.remove('hidden'); 
       } else { 
           adminBtn.classList.add('hidden'); 
-          document.getElementById('header-owner-badge').classList.add('hidden'); 
+          const badge = document.getElementById('header-owner-badge');
+          if(badge) badge.classList.add('hidden'); 
       }
   }
 };
@@ -290,8 +297,8 @@ function checkDailyReward() {
    if(screenHistory[screenHistory.length-1] !== 'home') return;
    const today = new Date().toDateString();
    const banner = document.getElementById('daily-reward-banner');
-   if(player.uid && player.lastDaily !== today) banner.classList.remove('hidden');
-   else banner.classList.add('hidden');
+   if(player.uid && player.lastDaily !== today) { if(banner) banner.classList.remove('hidden'); }
+   else { if(banner) banner.classList.add('hidden'); }
 }
 async function claimDailyReward() {
    if(!player.uid) return showToast("سجل دخولك أولاً", "🔒", "error");
@@ -636,7 +643,7 @@ function searchPlayersGlobal() {
    
    filtered.forEach((u, i) => {
       const frameCls = getFrameClass(u.equippedFrame);
-      resDiv.innerHTML += `<div onclick="openPublicProfile('${u.uid}')" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-brand-500/30 cursor-pointer hover:bg-white/5 transition"><div class="flex items-center gap-3"><div class="relative rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-10 h-10 rounded-full border border-gray-600 bg-game-darkBg object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-[10px] z-20">👑</span>` : ''}</div><div><h4 class="text-xs font-black text-white ${u.email === OWNER_EMAIL ? 'text-amber-400' : ''}">${u.name}</h4><span class="text-[10px] text-brand-400 font-bold">مرحلة ${u.currentLevel}</span></div></div><button class="bg-brand-500/20 text-brand-400 px-3 py-1.5 rounded-xl text-[10px] font-bold flex gap-1 items-center"><i class="fa-solid fa-eye"></i> زيارة</button></div>`;
+      resDiv.innerHTML += `<div onclick="openPublicProfile('${u.uid}')" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-brand-500/30 cursor-pointer hover:bg-white/5 transition"><div class="flex items-center gap-3"><div class="relative rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-10 h-10 rounded-full border border-gray-600 bg-game-darkBg object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-[10px] z-20">👑</span>` : ''}</div><div><h4 class="text-xs font-black text-white ${u.isBanned ? 'text-red-500 line-through' : ''}">${u.name}</h4><span class="text-[10px] text-brand-400 font-bold">مرحلة ${u.currentLevel}</span></div></div><button class="bg-brand-500/20 text-brand-400 px-3 py-1.5 rounded-xl text-[10px] font-bold flex gap-1 items-center"><i class="fa-solid fa-eye"></i> زيارة</button></div>`;
    });
 }
 
