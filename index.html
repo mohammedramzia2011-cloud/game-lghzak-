@@ -110,7 +110,7 @@
               <span class="text-3xl animate-bounce">🎁</span>
               <div>
                  <h3 class="text-xs font-black text-amber-300">مكافأتك اليومية جاهزة!</h3>
-                 <p class="text-[10px] text-gray-300 font-bold">افتح صندوق الحظ الآن واستلم هديتك.</p>
+                 <p class="text-[10px] text-gray-300 font-bold">اضغط لاستلام هديتك اليومية.</p>
               </div>
            </div>
            <button onclick="claimDailyReward()" class="btn-3d-green px-4 py-2 rounded-xl text-xs font-black relative z-10">استلام</button>
@@ -242,20 +242,16 @@
         </div>
 
         <div class="glass-card p-4 rounded-3xl border border-brand-500/30 space-y-3 mt-3">
-          <!-- أزرار الزائر (التسجيل) ثابتة ومحمية -->
           <div id="auth-guest-section" class="flex flex-col gap-2">
               <button onclick="openAuthModal()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow-lg">
                   <i class="fa-solid fa-user-plus"></i> تسجيل الدخول / إنشاء حساب
               </button>
           </div>
-          
-          <!-- أزرار المسجل (الخروج) ثابتة ومحمية -->
           <div id="auth-logged-section" class="hidden flex flex-col gap-2">
               <button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg">
                   <i class="fa-solid fa-right-from-bracket text-base"></i> تسجيل الخروج
               </button>
           </div>
-
           <div id="owner-admin-btn-container" class="hidden pt-2 border-t border-white/10">
               <button onclick="navigateTo('admin')" class="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-lg"><span>👑 لوحة تحكم المالك العام</span></button>
           </div>
@@ -377,6 +373,32 @@
           </div>
         </div>
 
+        <!-- Gift & Codes Tab (تمت إعادتها بنجاح) -->
+        <div id="admin-sec-gift" class="hidden space-y-3">
+          <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-3">
+            <h3 class="text-xs font-black text-yellow-300">إنشاء كود هدايا جديد</h3>
+            <input type="text" id="adm-code-name" placeholder="الرمز (مثال: FREE100)" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white uppercase" />
+            <div class="grid grid-cols-2 gap-2">
+                <input type="number" id="adm-code-gems" placeholder="جواهر" value="0" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-purple-300" />
+                <input type="number" id="adm-code-shards" placeholder="شظايا" value="0" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-brand-300" />
+            </div>
+            <select id="adm-code-type" onchange="updateCodeItemPlaceholder()" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white outline-none mt-2">
+               <option value="none">بدون عنصر هدية (عملات فقط)</option>
+               <option value="title">إهداء لقب (Title)</option>
+               <option value="avatar">إهداء صورة رمزية (Avatar URL)</option>
+               <option value="frame">إهداء إطار (Frame)</option>
+               <option value="banner">إهداء بنر خلفية (Banner)</option>
+            </select>
+            <input type="text" id="adm-code-item" placeholder="اسم العنصر أو الرابط" class="hidden w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white mt-2" />
+            <button onclick="adminCreateCode()" class="w-full btn-3d-purple py-2 rounded-xl text-xs font-black mt-2">إنشاء الكود 🎁</button>
+          </div>
+          
+          <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-3">
+            <h3 class="text-xs font-black text-brand-300">إدارة الأكواد الحالية</h3>
+            <div id="adm-codes-list" class="space-y-2 max-h-40 overflow-y-auto"></div>
+          </div>
+        </div>
+
         <!-- Danger Tab -->
         <div id="admin-sec-danger" class="hidden space-y-3">
           <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-3">
@@ -470,10 +492,9 @@
     </nav>
   </div>
 
-  <!-- الكود البرمجي الرئيسي أولاً لضمان وجود الدوال -->
   <script src="app.js"></script>
 
-  <!-- FIREBASE IMPORTS و معالجة شاشة التحميل -->
+  <!-- FIREBASE IMPORTS -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
