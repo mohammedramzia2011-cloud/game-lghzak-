@@ -38,7 +38,7 @@ function navigateTo(screenId) {
   if(screenId === 'admin') populateAdminDropdowns();
   if(screenId === 'shop') renderShopItems();
   if(screenId === 'crates') renderCrates();
-  if(screenId === 'profile') { calculateProfileRank(); updateUI(); }
+  if(screenId === 'profile') { calculateProfileRank(); updateUI(); window.updateUIForAuth(); }
   if(screenId === 'home') checkDailyReward();
 }
 
@@ -113,7 +113,7 @@ window.loadPlayerData = async (user) => {
        await window.setDoc(userRef, player);
     }
     player.isOwner = (user.email === OWNER_EMAIL);
-    updateUI(); 
+    updateUI(); window.updateUIForAuth();
   } catch (error) { showToast("خطأ في جلب البيانات", "❌", "error"); }
 };
 
@@ -162,7 +162,7 @@ window.setupRealtimeListeners = () => {
            player.frames = data.frames || ['بدون إطار']; player.equippedFrame = data.equippedFrame || 'بدون إطار';
            player.banners = data.banners || ['بدون بنر']; player.equippedBanner = data.equippedBanner || 'بدون بنر';
            player.badges = data.badges || []; player.lastDaily = data.lastDaily || '';
-           updateUI();
+           updateUI(); window.updateUIForAuth();
         }
      });
   }
@@ -182,19 +182,32 @@ function applyGlobalSettings() {
     } else { updBanner.classList.add('hidden'); }
 }
 
+// دالة واجهة أزرار التسجيل (تم الحماية والتأكد من إظهار الزر دائماً)
 window.updateUIForAuth = () => {
   const container = document.getElementById('auth-buttons-container');
   const emailText = document.getElementById('profile-email-text');
   const adminBtn = document.getElementById('owner-admin-btn-container');
-  if (window.currentUserId && player.email !== '') {
-    emailText.innerText = player.email;
-    container.innerHTML = `<button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</button>`;
-  } else {
-    emailText.innerText = 'زائر';
-    container.innerHTML = `<button onclick="openAuthModal()" class="w-full btn-3d-orange py-2 rounded-xl text-xs font-black">تسجيل الدخول لحفظ تقدمك</button>`;
+  
+  if(container) {
+      if (window.currentUserId && player.email && player.email !== '') {
+        if(emailText) emailText.innerText = player.email;
+        container.innerHTML = `<button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg"><i class="fa-solid fa-right-from-bracket text-base"></i> تسجيل الخروج</button>`;
+      } else {
+        if(emailText) emailText.innerText = 'زائر مؤقت';
+        // الزر أصبح بارزاً ومضمون الظهور هنا
+        container.innerHTML = `<button onclick="openAuthModal()" class="w-full btn-3d-orange py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 shadow-lg"><i class="fa-solid fa-user-plus"></i> تسجيل الدخول / إنشاء حساب</button>`;
+      }
   }
-  if (isOwner()) { adminBtn.classList.remove('hidden'); document.getElementById('header-owner-badge').classList.remove('hidden'); }
-  else { adminBtn.classList.add('hidden'); document.getElementById('header-owner-badge').classList.add('hidden'); }
+  
+  if(adminBtn) {
+      if (isOwner()) { 
+          adminBtn.classList.remove('hidden'); 
+          document.getElementById('header-owner-badge').classList.remove('hidden'); 
+      } else { 
+          adminBtn.classList.add('hidden'); 
+          document.getElementById('header-owner-badge').classList.add('hidden'); 
+      }
+  }
 };
 
 function updateUI() {
@@ -649,6 +662,8 @@ async function claimPromoCode() {
       closeModal('modal-redeem'); showToast(msg, "🎉", "success"); document.getElementById('redeem-code-input').value = ''; confetti(); playSFX('win');
    } catch(e) { showToast("خطأ", "❌", "error"); }
 }
+
+// ================= لوحة تحكم الإدارة (المالك) =================
 
 function switchAdminTab(tab) {
    document.querySelectorAll('[id^="admin-sec-"]').forEach(el => el.classList.add('hidden'));
