@@ -29,7 +29,7 @@
     }
   </script>
 
-  <link rel="style" href="style.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body class="flex justify-center items-center min-h-screen p-0 md:p-4 bg-gray-950">
@@ -118,6 +118,10 @@
           <button onclick="navigateTo('shop')" class="glass-card p-4 rounded-2xl flex flex-col items-center border border-amber-500/30 hover:border-amber-400 transition"><span class="text-3xl mb-1">💎</span><span class="text-xs font-black text-white">المتجر</span><span class="text-[10px] text-amber-400 mt-0.5 font-bold">ألقاب وإطارات</span></button>
           <button onclick="navigateTo('leaderboard')" class="glass-card p-4 rounded-2xl flex flex-col items-center border border-yellow-500/30 hover:border-yellow-400 transition"><span class="text-3xl mb-1">🏆</span><span class="text-xs font-black text-white">الترتيب العالمي</span><span class="text-[10px] text-yellow-400 mt-0.5 font-bold">ابحث ونافس</span></button>
         </div>
+        <div class="glass-card p-4 rounded-2xl flex justify-between items-center border border-white/10">
+          <div class="flex items-center gap-3"><span class="text-2xl">🎁</span><div><h4 class="text-xs font-black text-white">كود هدايا؟</h4><p class="text-[10px] text-gray-400">استرد الرمز هنا</p></div></div>
+          <button onclick="openRedeemModal()" class="btn-3d-purple px-3 py-1.5 rounded-xl text-xs font-black">إدخال الكود</button>
+        </div>
       </section>
 
       <!-- 3. WORLDS -->
@@ -138,7 +142,7 @@
         <div id="levels-grid" class="grid grid-cols-4 gap-3 max-h-[70vh] overflow-y-auto p-1"></div>
       </section>
 
-      <!-- 5. GAME PLAY (كما هو) -->
+      <!-- 5. GAME PLAY -->
       <section id="screen-game" class="hidden p-4 flex flex-col h-full justify-between pb-20">
         <div class="flex justify-between items-center glass-card p-3 rounded-2xl border border-white/10">
           <div class="flex items-center gap-2"><button onclick="goBack()" class="text-gray-300 hover:text-white bg-black/40 p-2 rounded-xl border border-white/10 flex items-center justify-center w-8 h-8"><i class="fa-solid fa-arrow-right"></i></button><span id="game-level-num" class="text-xs font-black text-brand-400">مرحلة 1</span></div>
@@ -231,7 +235,7 @@
         </div>
       </section>
 
-      <!-- 9B. PUBLIC PROFILE (Visit) -->
+      <!-- 9B. PUBLIC PROFILE -->
       <section id="screen-public-profile" class="hidden p-4 space-y-4 pb-20">
         <div class="flex justify-between items-center"><button onclick="goBack()" class="bg-black/50 border border-white/10 text-gray-300 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> رجوع</button><span class="text-xs text-cyan-400 font-bold">زيارة حساب</span></div>
         <div id="pub-profile-card" class="glass-card p-5 rounded-3xl border border-white/10 flex flex-col items-center text-center relative overflow-hidden">
@@ -273,7 +277,7 @@
           <button onclick="switchAdminTab('danger')" id="admintab-danger" class="py-2 px-1 rounded-xl text-red-400">إدارة</button>
         </div>
 
-        <!-- Updates Tab (جديد) -->
+        <!-- Updates Tab -->
         <div id="admin-sec-updates" class="space-y-3">
             <div class="glass-card p-4 rounded-2xl border border-cyan-500/30 space-y-3">
                 <h3 class="text-xs font-black text-cyan-400">📢 إعدادات التحديثات والتصميم الشامل</h3>
@@ -285,14 +289,13 @@
             </div>
         </div>
 
-        <!-- Levels / Worlds Tab -->
+        <!-- Levels Tab -->
         <div id="admin-sec-levels" class="hidden space-y-3">
           <div class="glass-card p-4 rounded-2xl border border-green-500/30 space-y-3 text-center">
              <h3 class="text-xs font-black text-green-400">توليد شامل وضخم ⚡</h3>
              <p class="text-[9px] text-gray-300">هذا الزر يقوم بإنشاء 10 عوالم وبداخل كل عالم 100 مرحلة متدرجة الصعوبة (مجموع 1000 مرحلة!)</p>
              <button onclick="adminGenerateMassiveGame()" class="w-full btn-3d-green py-3 rounded-xl text-sm font-black">توليد 10 عوالم × 100 مرحلة 🔥</button>
           </div>
-          <!-- إضافة يدوية ... -->
           <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-3">
             <h3 class="text-xs font-black text-amber-300">إضافة/تعديل مرحلة يدوية</h3>
             <div class="grid grid-cols-2 gap-2"><input type="number" id="adm-lvl-num" placeholder="رقم المرحلة" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" /><select id="adm-lvl-world" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white"></select></div>
@@ -309,7 +312,7 @@
             <select id="adm-shop-type" onchange="updateShopInputPlaceholder()" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white mb-2 outline-none">
                <option value="title">لقب (Title)</option>
                <option value="avatar">صورة رمزية برابط (Avatar URL)</option>
-               <option value="frame">إطار للصورة (Frame - ذهبي، ناري، نيون، أسطوري)</option>
+               <option value="frame">إطار للصورة (Frame)</option>
                <option value="banner">بنر خلفية برابط (Banner URL)</option>
             </select>
             <input type="text" id="adm-shop-title" placeholder="اسم اللقب" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
@@ -347,10 +350,10 @@
           </div>
         </div>
 
-        <!-- Danger Tab (البحث والإدارة) -->
+        <!-- Danger Tab -->
         <div id="admin-sec-danger" class="hidden space-y-3">
           <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-3">
-            <h3 class="text-xs font-black text-cyan-300">بحث عن لاعبين (يمكنك الدخول للحساب وحظره)</h3>
+            <h3 class="text-xs font-black text-cyan-300">بحث عن لاعبين (تعديل وحظر)</h3>
             <div class="flex gap-2"><input type="text" id="adm-search-input" placeholder="اسم اللاعب..." class="flex-1 bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" /><button onclick="adminSearchUsers()" class="btn-3d-purple px-4 rounded-xl text-xs font-black">بحث</button></div>
             <div id="adm-search-results" class="space-y-2 max-h-60 overflow-y-auto"></div>
           </div>
@@ -381,7 +384,7 @@
       </div>
     </div>
 
-    <!-- BANNED MODAL (رسالة الحظر) -->
+    <!-- BANNED MODAL -->
     <div id="modal-banned" class="hidden fixed inset-0 z-[200] bg-red-950 flex flex-col items-center justify-center p-6 text-center">
         <span class="text-7xl mb-4">🚫</span>
         <h2 class="text-3xl font-black text-white font-messiri mb-2">حساب محظور</h2>
@@ -401,6 +404,22 @@
     <!-- WIN MODAL -->
     <div id="modal-win" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
       <div class="glass-card-orange w-full max-w-xs p-6 rounded-3xl border border-amber-400 text-center space-y-4 scale-105 shadow-glow-orange"><span class="text-5xl animate-bounce inline-block">🎉</span><h3 class="text-2xl font-black text-amber-300 font-messiri">إجابة صحيحة!</h3><p id="win-reward-text" class="text-xs text-white font-bold"></p><button onclick="nextLevelFromWinModal()" class="w-full btn-3d-orange py-3 rounded-2xl text-sm font-black">المرحلة التالية ➔</button></div>
+    </div>
+
+    <!-- WORLD COMPLETE MODAL -->
+    <div id="modal-world-complete" class="hidden fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="glass-card w-full max-w-sm p-8 rounded-3xl border-2 border-yellow-400 text-center space-y-4 scale-105 shadow-[0_0_30px_rgba(250,204,21,0.5)]">
+         <span class="text-6xl animate-pulse block">🏆</span>
+         <h3 class="text-3xl font-black text-yellow-400 font-messiri">تهانينا يا أسطورة!</h3>
+         <p class="text-sm text-gray-200 font-bold">أنهيت هذا العالم ببراعة وتجاوزت الصعاب.</p>
+         <div class="bg-black/40 border border-yellow-500/30 p-3 rounded-xl space-y-2">
+            <p class="text-xs text-yellow-300 font-black">مكافآت إتمام العالم:</p>
+            <p class="text-lg font-black text-white">+100 💎 | +500 🧩</p>
+            <p id="world-complete-title-reward" class="text-xs font-bold text-cyan-300"></p>
+         </div>
+         <p id="world-complete-top10" class="text-sm font-black text-amber-400 animate-pulse"></p>
+         <button onclick="closeWorldCompleteAndGoNext()" class="w-full btn-3d-purple py-3 rounded-2xl text-sm font-black mt-2">انتقل للعالم التالي 🚀</button>
+      </div>
     </div>
 
     <!-- CRATE OPEN MODAL -->
@@ -423,18 +442,16 @@
     </nav>
   </div>
 
-  <!-- FIREBASE IMPORTS -->
- <!-- 1. استدعاء ملف الأكواد أولاً بدون كلمة defer لضمان قراءته قبل الفايربيس -->
+  <!-- الكود البرمجي الرئيسي أولاً لضمان وجود الدوال -->
   <script src="app.js"></script>
 
-  <!-- 2. الفايربيس وإعداداتك الصحيحة -->
+  <!-- FIREBASE IMPORTS و معالجة شاشة التحميل -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
     import { getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // إعدادات فايربيس الخاصة بك (تم التأكد منها)
     const firebaseConfig = {
       apiKey: "AIzaSyCuRvU6LFqDtIAGDbKFqiv4MceF9RXZSmc",
       authDomain: "lghzak-game.firebaseapp.com",
@@ -477,7 +494,6 @@
       try {
           if (user) { 
             window.currentUserId = user.uid; 
-            // التأكد من وجود الدالة قبل استدعائها لتجنب الخطأ
             if(window.loadPlayerData) await window.loadPlayerData(user); 
             if(window.setupRealtimeListeners) window.setupRealtimeListeners(); 
           } else { 
@@ -486,21 +502,15 @@
           }
           if(window.updateUIForAuth) window.updateUIForAuth();
       } catch (error) {
-          console.error("Firebase Error:", error);
+          console.error("Firebase Auth Error:", error);
       } finally {
-          // هذا الكود سيعمل دائماً (سواء نجح الفايربيس أو فشل)
           setTimeout(() => {
               const splashScreen = document.getElementById('screen-splash');
-              if (splashScreen) {
-                  splashScreen.classList.add('hidden');
-              }
-              if (window.isUserBannedLocally) {
-                  return; // إذا كان محظوراً، ابقَ في شاشة الحظر
-              }
+              if (splashScreen) { splashScreen.classList.add('hidden'); }
+              if (window.isUserBannedLocally) { return; }
               if (window.navigateTo) {
                   window.navigateTo('home');
               } else {
-                  // فتح الرئيسية إجبارياً في حال عدم استجابة ملف الجافاسكريبت
                   document.getElementById('screen-home').classList.remove('hidden');
                   document.getElementById('bottom-nav').classList.remove('hidden');
                   document.getElementById('top-bar').classList.remove('hidden');
@@ -510,7 +520,7 @@
     });
   </script>
 
-  <!-- 3. كود طوارئ إضافي: تخطي الشاشة بعد 3 ثوانٍ مهما حصل -->
+  <!-- كود الإنقاذ النهائي (يمنع تعليق اللعبة للأبد) -->
   <script>
     window.addEventListener('load', () => {
         setTimeout(() => {
