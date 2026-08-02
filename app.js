@@ -2,7 +2,7 @@ const OWNER_EMAIL = "mohammedabudayya2011@gmail.com";
 let screenHistory = ['home'], allUsers = [], dbWorlds = [], dbLevels = [], dbShopItems = [], dbCodes = [], dbCrates = [];
 window.appSettings = {}; 
 window.isUserBannedLocally = false;
-window.listenersActive = false; // لمنع التكرار وتسريع اللعبة
+window.listenersActive = false;
 
 let defaultPlayer = {
   uid: '', email: '', name: 'زائر', 
@@ -20,9 +20,7 @@ function isOwner() { return player.email === OWNER_EMAIL; }
 function getDisplayGems() { return isOwner() ? "∞" : player.gems; }
 function getDisplayShards() { return isOwner() ? "∞" : player.shards; }
 
-function calcAccLevel(puzzleStage) {
-    return Math.floor((puzzleStage - 1) / 10) + 1; 
-}
+function calcAccLevel(puzzleStage) { return Math.floor((puzzleStage - 1) / 10) + 1; }
 
 const frameClassesMap = { 'بدون إطار': '', 'ذهبي': 'frame-gold', 'ناري': 'frame-fire', 'نيون': 'frame-neon', 'أسطوري': 'frame-mythic' };
 function getFrameClass(frameName) { return frameClassesMap[frameName] || ''; }
@@ -190,7 +188,7 @@ function applyGlobalSettings() {
     } else { if(updBanner) updBanner.classList.add('hidden'); }
 }
 
-// دالة أزرار التسجيل (تم حل المشكلة جذرياً هنا)
+// دالة أزرار التسجيل (تم حل المشكلة جذرياً وتتفاعل فوراً مع الدخول)
 window.updateUIForAuth = () => {
   const guestSec = document.getElementById('auth-guest-section');
   const loggedSec = document.getElementById('auth-logged-section');
@@ -198,30 +196,32 @@ window.updateUIForAuth = () => {
   const adminBtn = document.getElementById('owner-admin-btn-container');
   const homeLoginBanner = document.getElementById('home-login-banner');
   
-  const isLogged = window.currentUserId ? true : false;
+  const currentUser = window.firebaseAuth ? window.firebaseAuth.currentUser : null;
+  const isLogged = currentUser ? true : false;
   
   if (isLogged) {
       if(guestSec) guestSec.classList.add('hidden');
       if(loggedSec) loggedSec.classList.remove('hidden');
-      if(emailText) emailText.innerText = player.email || player.name || 'حساب زائر';
+      if(emailText) emailText.innerText = currentUser.email || player.name || 'حساب زائر';
       if(homeLoginBanner) homeLoginBanner.classList.add('hidden');
+      
+      if (currentUser.email === OWNER_EMAIL) {
+          if(adminBtn) adminBtn.classList.remove('hidden');
+          const badge = document.getElementById('header-owner-badge');
+          if(badge) badge.classList.remove('hidden');
+      } else {
+          if(adminBtn) adminBtn.classList.add('hidden');
+          const badge = document.getElementById('header-owner-badge');
+          if(badge) badge.classList.add('hidden');
+      }
   } else {
       if(guestSec) guestSec.classList.remove('hidden');
       if(loggedSec) loggedSec.classList.add('hidden');
       if(emailText) emailText.innerText = 'غير مسجل';
       if(homeLoginBanner) homeLoginBanner.classList.remove('hidden');
-  }
-  
-  if(adminBtn) {
-      if (isOwner()) { 
-          adminBtn.classList.remove('hidden'); 
-          const badge = document.getElementById('header-owner-badge');
-          if(badge) badge.classList.remove('hidden'); 
-      } else { 
-          adminBtn.classList.add('hidden'); 
-          const badge = document.getElementById('header-owner-badge');
-          if(badge) badge.classList.add('hidden'); 
-      }
+      if(adminBtn) adminBtn.classList.add('hidden');
+      const badge = document.getElementById('header-owner-badge');
+      if(badge) badge.classList.add('hidden');
   }
 };
 
@@ -292,12 +292,16 @@ async function handleEmailLogin() {
   const pass = document.getElementById('auth-pass-input').value;
   if(!email || !pass) return showToast("أدخل البيانات", "⚠️", "error");
   try { 
-      await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass); 
+      const cred = await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass); 
+      await window.loadPlayerData(cred.user);
+      window.updateUIForAuth();
       closeModal('modal-auth'); 
       showToast("تم تسجيل الدخول", "✅", "success"); 
   } catch (e) {
       try { 
-          await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass); 
+          const cred = await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass); 
+          await window.loadPlayerData(cred.user);
+          window.updateUIForAuth();
           closeModal('modal-auth'); 
           showToast("تم إنشاء حساب جديد بنجاح", "✅", "success"); 
       } catch(err) { 
@@ -305,8 +309,28 @@ async function handleEmailLogin() {
       }
   }
 }
-async function handleGoogleLogin() { try { const provider = new window.GoogleAuthProvider(); await window.signInWithPopup(window.firebaseAuth, provider); closeModal('modal-auth'); showToast("تم الدخول بنجاح", "✅", "success"); } catch(e) { showToast("فشل", "❌", "error"); } }
-async function handleAnonymousLogin() { try { await window.signInAnonymously(window.firebaseAuth); closeModal('modal-auth'); showToast("دخلت كزائر", "✅", "success"); } catch(e) { showToast("خطأ", "❌", "error"); } }
+
+async function handleGoogleLogin() { 
+    try { 
+        const provider = new window.GoogleAuthProvider(); 
+        const cred = await window.signInWithPopup(window.firebaseAuth, provider); 
+        await window.loadPlayerData(cred.user);
+        window.updateUIForAuth();
+        closeModal('modal-auth'); 
+        showToast("تم الدخول بنجاح", "✅", "success"); 
+    } catch(e) { showToast("فشل", "❌", "error"); } 
+}
+
+async function handleAnonymousLogin() { 
+    try { 
+        const cred = await window.signInAnonymously(window.firebaseAuth); 
+        await window.loadPlayerData(cred.user);
+        window.updateUIForAuth();
+        closeModal('modal-auth'); 
+        showToast("دخلت كزائر", "✅", "success"); 
+    } catch(e) { showToast("خطأ", "❌", "error"); } 
+}
+
 async function handleLogout() { try { await window.signOut(window.firebaseAuth); showToast("وداعاً", "👋", "success"); window.location.reload(); } catch(e) {} }
 
 function checkDailyReward() {
