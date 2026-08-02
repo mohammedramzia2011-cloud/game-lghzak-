@@ -1,6 +1,6 @@
 const OWNER_EMAIL = "mohammedabudayya2011@gmail.com";
 let screenHistory = ['home'], allUsers = [], dbWorlds = [], dbLevels = [], dbShopItems = [], dbCodes = [], dbCrates = [];
-window.appSettings = {}; // إعدادات اللعبة الشاملة من المالك
+window.appSettings = {}; 
 window.isUserBannedLocally = false;
 
 let defaultPlayer = {
@@ -20,13 +20,12 @@ function getDisplayGems() { return isOwner() ? "∞" : player.gems; }
 function getDisplayShards() { return isOwner() ? "∞" : player.shards; }
 
 function calcAccLevel(puzzleStage) {
-    return Math.floor((puzzleStage - 1) / 10) + 1; // كل 10 مراحل يرتفع لفل
+    return Math.floor((puzzleStage - 1) / 10) + 1; 
 }
 
 const frameClassesMap = { 'بدون إطار': '', 'ذهبي': 'frame-gold', 'ناري': 'frame-fire', 'نيون': 'frame-neon', 'أسطوري': 'frame-mythic' };
 function getFrameClass(frameName) { return frameClassesMap[frameName] || ''; }
 
-// Navigation & UI
 function navigateTo(screenId) {
   if(window.isUserBannedLocally) return;
   document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
@@ -68,7 +67,6 @@ function showToast(msg, icon = '✨', type = 'info') {
   setTimeout(() => { toast.classList.add('-translate-y-10', 'opacity-0'); }, 3000);
 }
 
-// SFX System
 let audioCtx = null;
 function playSFX(type) {
   try {
@@ -84,22 +82,21 @@ function playSFX(type) {
   } catch (e) {}
 }
 
-// Generate Unique Name Helper
 function getUniqueName(baseName) {
     let newName = baseName;
     while(allUsers.some(u => u.name === newName)) { newName = baseName + '_' + Math.floor(Math.random()*9999); }
     return newName;
 }
 
-// Auth & Init
 window.resetPlayerData = () => { player = JSON.parse(JSON.stringify(defaultPlayer)); updateUI(); };
+
 window.loadPlayerData = async (user) => {
   try {
     const userRef = window.doc(window.firebaseDb, window.DB_PATH + 'users', user.uid);
     const snap = await window.getDoc(userRef);
     if (snap.exists()) { 
        const data = snap.data();
-       if(data.isBanned) { window.isUserBannedLocally = true; openModal('modal-banned'); await window.signOut(window.firebaseAuth); return; }
+       if(data.isBanned) { window.isUserBannedLocally = true; openModal('modal-banned'); return; }
        
        player = { ...defaultPlayer, ...data, uid: user.uid, email: user.email || '' };
        if(!player.avatars) player.avatars = ['https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak'];
@@ -111,7 +108,6 @@ window.loadPlayerData = async (user) => {
        if(!player.badges) player.badges = [];
        player.accLevel = calcAccLevel(player.currentLevel);
     } else {
-       // لاعب جديد
        let newName = getUniqueName('لاعب');
        player = { ...defaultPlayer, uid: user.uid, email: user.email || '', name: newName, accLevel: 1 };
        await window.setDoc(userRef, player);
@@ -122,12 +118,8 @@ window.loadPlayerData = async (user) => {
 };
 
 window.setupRealtimeListeners = () => {
-  // الاستماع للإعدادات الكبرى (التحديثات)
   window.onSnapshot(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), (docSnap) => {
-     if(docSnap.exists()){
-         window.appSettings = docSnap.data();
-         applyGlobalSettings();
-     }
+     if(docSnap.exists()){ window.appSettings = docSnap.data(); applyGlobalSettings(); }
   });
 
   window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'worlds'), (snap) => {
@@ -149,6 +141,10 @@ window.setupRealtimeListeners = () => {
     if(screenHistory[screenHistory.length-1] === 'crates') renderCrates();
     if(screenHistory[screenHistory.length-1] === 'admin') renderAdminCrates();
   });
+  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'codes'), (snap) => {
+    dbCodes = snap.docs.map(d => d.data());
+    if(screenHistory[screenHistory.length-1] === 'admin') renderAdminCodes();
+  });
   window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'users'), (snap) => {
     allUsers = snap.docs.map(d => d.data());
     if(screenHistory[screenHistory.length-1] === 'leaderboard') renderLeaderboard();
@@ -159,7 +155,6 @@ window.setupRealtimeListeners = () => {
         if(docSnap.exists()){
            const data = docSnap.data(); 
            if(data.isBanned) { window.isUserBannedLocally = true; openModal('modal-banned'); return; }
-           
            player.shards = data.shards; player.gems = data.gems; player.currentLevel = data.currentLevel; player.name = data.name; 
            player.accLevel = calcAccLevel(player.currentLevel);
            player.titles = data.titles || ['مستكشف الألغاز']; player.equippedTitle = data.equippedTitle || 'مستكشف الألغاز';
@@ -175,11 +170,8 @@ window.setupRealtimeListeners = () => {
 
 function applyGlobalSettings() {
     if(!window.appSettings) return;
-    if(window.appSettings.bgUrl) {
-        document.getElementById('app-container').style.backgroundImage = `url('${window.appSettings.bgUrl}')`;
-    } else {
-        document.getElementById('app-container').style.backgroundImage = 'none';
-    }
+    if(window.appSettings.bgUrl) { document.getElementById('app-container').style.backgroundImage = `url('${window.appSettings.bgUrl}')`; } 
+    else { document.getElementById('app-container').style.backgroundImage = 'none'; }
     if(window.appSettings.splashTitle) document.getElementById('splash-title').innerText = window.appSettings.splashTitle;
     if(window.appSettings.splashSub) document.getElementById('splash-subtitle').innerText = window.appSettings.splashSub;
     
@@ -187,9 +179,7 @@ function applyGlobalSettings() {
     if(window.appSettings.updateMsg && window.appSettings.updateMsg.trim() !== "") {
         document.getElementById('global-update-text').innerText = window.appSettings.updateMsg;
         updBanner.classList.remove('hidden');
-    } else {
-        updBanner.classList.add('hidden');
-    }
+    } else { updBanner.classList.add('hidden'); }
 }
 
 window.updateUIForAuth = () => {
@@ -208,7 +198,7 @@ window.updateUIForAuth = () => {
 };
 
 function updateUI() {
-  player.accLevel = calcAccLevel(player.currentLevel); // تحديث لفل الحساب
+  player.accLevel = calcAccLevel(player.currentLevel); 
   
   document.getElementById('currency-shards').innerText = getDisplayShards(); 
   document.getElementById('currency-gems').innerText = getDisplayGems();
@@ -230,9 +220,7 @@ function updateUI() {
       profileCard.style.backgroundImage = `url('${player.equippedBanner}')`;
       profileCard.style.backgroundSize = 'cover';
       profileCard.style.backgroundPosition = 'center';
-  } else {
-      profileCard.style.backgroundImage = 'none';
-  }
+  } else { profileCard.style.backgroundImage = 'none'; }
   
   const badgesContainer = document.getElementById('profile-badges-container');
   badgesContainer.innerHTML = '';
@@ -241,9 +229,7 @@ function updateUI() {
           let badgeClass = badge.includes('أسطورة') || badge.includes('نادر') ? 'badge-mythic' : 'badge-item';
           badgesContainer.innerHTML += `<span class="${badgeClass}">${badge}</span>`;
       });
-  } else {
-      badgesContainer.innerHTML = '<span class="text-[10px] text-gray-500">لا توجد أوسمة بعد</span>';
-  }
+  } else { badgesContainer.innerHTML = '<span class="text-[10px] text-gray-500">لا توجد أوسمة بعد</span>'; }
   
   const titleSelect = document.getElementById('equip-title-select'); titleSelect.innerHTML = '';
   player.titles.forEach(t => { titleSelect.innerHTML += `<option value="${t}" ${player.equippedTitle === t ? 'selected' : ''}>${t}</option>`; });
@@ -273,7 +259,6 @@ async function savePlayer() {
   }); } catch(e) {}
 }
 
-// Auth Login
 async function handleEmailLogin() {
   const email = document.getElementById('auth-email-input').value, pass = document.getElementById('auth-pass-input').value;
   if(!email || !pass) return showToast("أدخل البيانات", "⚠️", "error");
@@ -288,7 +273,6 @@ async function handleGoogleLogin() { try { const provider = new window.GoogleAut
 async function handleAnonymousLogin() { try { await window.signInAnonymously(window.firebaseAuth); closeModal('modal-auth'); showToast("دخلت كزائر", "✅", "success"); } catch(e) { showToast("خطأ", "❌", "error"); } }
 async function handleLogout() { try { await window.signOut(window.firebaseAuth); showToast("وداعاً", "👋", "success"); window.location.reload(); } catch(e) {} }
 
-// Daily Reward
 function checkDailyReward() {
    if(screenHistory[screenHistory.length-1] !== 'home') return;
    const today = new Date().toDateString();
@@ -305,12 +289,10 @@ async function claimDailyReward() {
    if(isGem) player.gems += amount; else player.shards += amount;
    player.lastDaily = today; await savePlayer();
    document.getElementById('daily-reward-banner').classList.add('hidden');
-   playSFX('win');
-   showToast(`استلمت مكافأة يومية: ${amount} ${isGem ? '💎' : '🧩'}`, "🎉", "success");
+   playSFX('win'); showToast(`استلمت مكافأة يومية: ${amount} ${isGem ? '💎' : '🧩'}`, "🎉", "success");
    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
 }
 
-// Game Logic
 function playCurrentLevel() {
   const lvl = dbLevels.find(l => l.num == player.currentLevel);
   if(!lvl) return showToast("أنت أسطورة! أنهيت كل المراحل الحالية.", "🚀", "info");
@@ -409,7 +391,7 @@ async function nextLevelFromWinModal() {
   if (player.currentLevel === currentLevelObj.num) {
      if(!isOwner()) player.shards += currentLevelObj.shards;
      player.currentLevel += 1; 
-     player.accLevel = calcAccLevel(player.currentLevel); // التحديث الفوري لمستوى الحساب
+     player.accLevel = calcAccLevel(player.currentLevel); 
      await savePlayer();
      
      const currentWorld = dbWorlds.find(w => w.id === currentLevelObj.world);
@@ -442,7 +424,6 @@ async function nextLevelFromWinModal() {
 }
 function closeWorldCompleteAndGoNext() { closeModal('modal-world-complete'); playCurrentLevel(); }
 
-// 📦 نظام الصناديق والبكجات
 function renderCrates() {
     const grid = document.getElementById('crates-grid'); if(!grid) return; grid.innerHTML = '';
     if(!dbCrates || dbCrates.length === 0) return grid.innerHTML = '<div class="text-center text-gray-400 text-xs py-8">لا توجد بكجات حالياً.</div>';
@@ -465,8 +446,7 @@ function renderCrates() {
 async function openCrate(crateId) {
     const crate = dbCrates.find(c => c.id === crateId);
     if (!crate) return;
-    if (player.accLevel < (crate.minLevel || 1)) { playSFX('wrong'); return showToast(`تحتاج مستوى حساب ${crate.minLevel} للفتح!`, "🔒", "error"); }
-
+    if (!isOwner() && player.accLevel < (crate.minLevel || 1)) { playSFX('wrong'); return showToast(`تحتاج مستوى حساب ${crate.minLevel} للفتح!`, "🔒", "error"); }
     if (!isOwner() && player[crate.currency] < crate.price) { playSFX('wrong'); return showToast("لا تملك عملات كافية لفتح الصندوق!", "⚠️", "error"); }
 
     if (!isOwner()) player[crate.currency] -= crate.price;
@@ -507,7 +487,6 @@ async function openCrate(crateId) {
     }, 1500);
 }
 
-// 💎 المتجر
 function renderShopItems() {
    const grid = document.getElementById('shop-items-grid'); if(!grid) return; grid.innerHTML = '';
    if(!dbShopItems || dbShopItems.length === 0) return grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 text-xs py-8">المتجر فارغ حالياً.</div>';
@@ -611,7 +590,6 @@ async function changeEquippedAvatar(avatarUrl) { player.equippedAvatar = avatarU
 async function changeEquippedFrame(frame) { player.equippedFrame = frame; await savePlayer(); updateUI(); showToast("تم تغيير الإطار", "✅", "success"); }
 async function changeEquippedBanner(banner) { player.equippedBanner = banner; await savePlayer(); updateUI(); showToast("تم تغيير البنر", "✅", "success"); }
 
-// تغيير الاسم مع منع التكرار
 async function editProfileName() { 
     const newName = prompt("أدخل اسمك الجديد (يجب أن يكون غير مستخدم):", player.name); 
     if(newName && newName.trim().length > 2) { 
@@ -672,8 +650,6 @@ async function claimPromoCode() {
    } catch(e) { showToast("خطأ", "❌", "error"); }
 }
 
-// ================= لوحة تحكم الإدارة (المالك) =================
-
 function switchAdminTab(tab) {
    document.querySelectorAll('[id^="admin-sec-"]').forEach(el => el.classList.add('hidden'));
    document.querySelectorAll('[id^="admintab-"]').forEach(el => el.className = el.id.includes('danger') ? "py-2 px-1 rounded-xl text-red-400" : "py-2 px-1 rounded-xl text-gray-400");
@@ -694,20 +670,15 @@ async function adminSaveGlobalSettings() {
     const splashT = document.getElementById('adm-setting-splash-title').value.trim();
     const splashS = document.getElementById('adm-setting-splash-sub').value.trim();
     const updMsg = document.getElementById('adm-setting-update-msg').value.trim();
-    
     try {
-        await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), {
-            bgUrl: bg, splashTitle: splashT, splashSub: splashS, updateMsg: updMsg
-        }, { merge: true });
+        await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), { bgUrl: bg, splashTitle: splashT, splashSub: splashS, updateMsg: updMsg }, { merge: true });
         showToast("تم تطبيق التحديثات على جميع اللاعبين!", "🚀", "success");
     } catch(e) { showToast("خطأ في حفظ الإعدادات", "❌", "error"); }
 }
 
-// التوليد الشامل لـ 1000 مرحلة (10 عوالم كل واحد 100 مرحلة وصعوبة متدرجة)
 async function adminGenerateMassiveGame() {
    if(!confirm("تحذير: سيتم توليد 10 عوالم جديدة وبداخلها 1000 مرحلة تلقائياً. هل أنت متأكد؟")) return;
    showToast("جاري التوليد الشامل... يرجى الانتظار", "⏳", "info");
-   
    const worlds = [
         { id: 'w1', name: 'غابة البداية', icon: '🌲', rewardTitle: 'حارس الغابة', top10Reward: 'أسطورة الطبيعة' },
         { id: 'w2', name: 'صحراء الغموض', icon: '🏜️', rewardTitle: 'فارس الصحراء', top10Reward: 'عقرب الرمال' },
@@ -720,27 +691,15 @@ async function adminGenerateMassiveGame() {
         { id: 'w9', name: 'متاهة الزمن', icon: '⏳', rewardTitle: 'حارس الزمن', top10Reward: 'المسافر عبر الزمن' },
         { id: 'w10', name: 'قلعة الأساطير', icon: '🏰', rewardTitle: 'الأسطورة الخالدة', top10Reward: 'حاكم العوالم المئة' }
    ];
-   
    try {
      let globalLevel = 1;
      for (let i = 0; i < worlds.length; i++) { 
-         let w = worlds[i];
-         let start = globalLevel;
-         let end = globalLevel + 99;
-         
-         // حفظ العالم
-         await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', w.id), { 
-             id: w.id, name: w.name, icon: w.icon, start: start, end: end, 
-             rewardTitle: w.rewardTitle, top10Reward: w.top10Reward, finishersCount: 0 
-         });
-         
-         // توليد 100 مرحلة لهذا العالم بصعوبة متدرجة (تزداد الجوائز كلما ارتفعنا)
+         let w = worlds[i]; let start = globalLevel; let end = globalLevel + 99;
+         await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', w.id), { id: w.id, name: w.name, icon: w.icon, start: start, end: end, rewardTitle: w.rewardTitle, top10Reward: w.top10Reward, finishersCount: 0 });
          let proms = [];
          for(let lvl = start; lvl <= end; lvl++){
-             let shardsReward = 20 + Math.floor(lvl / 5); // زيادة متدرجة
-             proms.push(window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+lvl), { 
-                 num: lvl, world: w.id, q: `لغز المرحلة رقم ${lvl} (صعوبة متزايدة)`, a: 'حل', shards: shardsReward 
-             }));
+             let shardsReward = 20 + Math.floor(lvl / 5);
+             proms.push(window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+lvl), { num: lvl, world: w.id, q: `لغز المرحلة رقم ${lvl}`, a: 'حل', shards: shardsReward }));
          }
          await Promise.all(proms);
          globalLevel = end + 1;
@@ -767,10 +726,8 @@ async function adminSaveShopItem() {
    try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'shop', id), { id, type, name, gems, shards }); showToast("أضيف للمتجر", "✅", "success"); document.getElementById('adm-shop-title').value = ''; } catch(e) { showToast("خطأ", "❌", "error"); }
 }
 
-// Admin Crates
 async function adminSaveCrate() {
-    const name = document.getElementById('adm-crate-name').value.trim(), icon = document.getElementById('adm-crate-icon').value.trim() || '📦', price = parseInt(document.getElementById('adm-crate-price').value), currency = document.getElementById('adm-crate-currency').value;
-    const minLevel = parseInt(document.getElementById('adm-crate-minlevel').value) || 1;
+    const name = document.getElementById('adm-crate-name').value.trim(), icon = document.getElementById('adm-crate-icon').value.trim() || '📦', price = parseInt(document.getElementById('adm-crate-price').value), currency = document.getElementById('adm-crate-currency').value, minLevel = parseInt(document.getElementById('adm-crate-minlevel').value) || 1;
     if(!name || !price) return showToast("ادخل اسم البكج والسعر", "⚠️", "error");
     
     const drops = [];
