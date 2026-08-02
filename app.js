@@ -188,7 +188,6 @@ function applyGlobalSettings() {
     } else { if(updBanner) updBanner.classList.add('hidden'); }
 }
 
-// دالة أزرار التسجيل (تم حل المشكلة جذرياً وتتفاعل فوراً مع الدخول)
 window.updateUIForAuth = () => {
   const guestSec = document.getElementById('auth-guest-section');
   const loggedSec = document.getElementById('auth-logged-section');
@@ -197,7 +196,7 @@ window.updateUIForAuth = () => {
   const homeLoginBanner = document.getElementById('home-login-banner');
   
   const currentUser = window.firebaseAuth ? window.firebaseAuth.currentUser : null;
-  const isLogged = currentUser ? true : false;
+  const isLogged = currentUser && !currentUser.isAnonymous ? true : false;
   
   if (isLogged) {
       if(guestSec) guestSec.classList.add('hidden');
@@ -270,8 +269,6 @@ function updateUI() {
   
   const bannerSelect = document.getElementById('equip-banner-select'); bannerSelect.innerHTML = '';
   player.banners.forEach((b, i) => { bannerSelect.innerHTML += `<option value="${b}" ${player.equippedBanner === b ? 'selected' : ''}>${b === 'بدون بنر' ? 'بدون بنر' : 'بنر ' + i}</option>`; });
-
-  checkDailyReward();
 }
 
 async function savePlayer() {
@@ -340,6 +337,7 @@ function checkDailyReward() {
    if(player.uid && player.lastDaily !== today) { if(banner) banner.classList.remove('hidden'); }
    else { if(banner) banner.classList.add('hidden'); }
 }
+
 async function claimDailyReward() {
    if(!player.uid) return showToast("سجل دخولك أولاً", "🔒", "error");
    const today = new Date().toDateString();
@@ -741,33 +739,48 @@ async function adminSaveGlobalSettings() {
 async function adminGenerateMassiveGame() {
    if(!confirm("تحذير: سيتم توليد 10 عوالم جديدة وبداخلها 1000 مرحلة تلقائياً. هل أنت متأكد؟")) return;
    showToast("جاري التوليد الشامل... يرجى الانتظار", "⏳", "info");
+   
+   const easyWords = ['قمر','شمس','بحر','نهر','جبل','نجم','سماء','نار','ماء','ثلج','رمل','أسد','نمر','دب','فيل'];
+   const medWords = ['كوكب','محيط','صحراء','غابة','بركان','زلزال','عاصفة','إعصار','جليد','سفينة','طائرة','سيارة','قطار'];
+   const hardWords = ['جاذبية','ديناميكا','فلسفة','تاريخ','جغرافيا','اقتصاد','خوارزمية','إلكترون','مجرة','أكسجين'];
+
    const worlds = [
-        { id: 'w1', name: 'غابة البداية', icon: '🌲', rewardTitle: 'حارس الغابة', top10Reward: 'أسطورة الطبيعة' },
+        { id: 'w1', name: 'غابة البداية', icon: '🌲', rewardTitle: 'حارس الغابة', top10Reward: 'أسطورة الغابة' },
         { id: 'w2', name: 'صحراء الغموض', icon: '🏜️', rewardTitle: 'فارس الصحراء', top10Reward: 'عقرب الرمال' },
         { id: 'w3', name: 'جبل الجليد', icon: '🏔️', rewardTitle: 'قاهر الصقيع', top10Reward: 'التنين الثلجي' },
         { id: 'w4', name: 'بركان الغضب', icon: '🌋', rewardTitle: 'سيد النار', top10Reward: 'العنقاء' },
-        { id: 'w5', name: 'أعماق المحيط', icon: '🌊', rewardTitle: 'حاكم البحار', top10Reward: 'لڤياثان الأعماق' },
+        { id: 'w5', name: 'أعماق المحيط', icon: '🌊', rewardTitle: 'حاكم البحار', top10Reward: 'لڤياثان' },
         { id: 'w6', name: 'مدينة السحاب', icon: '☁️', rewardTitle: 'صقر السماء', top10Reward: 'سيد الرياح' },
         { id: 'w7', name: 'بوابة المجرة', icon: '🌌', rewardTitle: 'رائد الفضاء', top10Reward: 'نجم المجرة' },
         { id: 'w8', name: 'عالم النيون', icon: '🏙️', rewardTitle: 'المخترق', top10Reward: 'سيد السايبر' },
-        { id: 'w9', name: 'متاهة الزمن', icon: '⏳', rewardTitle: 'حارس الزمن', top10Reward: 'المسافر عبر الزمن' },
-        { id: 'w10', name: 'قلعة الأساطير', icon: '🏰', rewardTitle: 'الأسطورة الخالدة', top10Reward: 'حاكم العوالم المئة' }
+        { id: 'w9', name: 'متاهة الزمن', icon: '⏳', rewardTitle: 'حارس الزمن', top10Reward: 'مسافر الزمن' },
+        { id: 'w10', name: 'قلعة الأساطير', icon: '🏰', rewardTitle: 'الأسطورة الخالدة', top10Reward: 'حاكم العوالم' }
    ];
    try {
      let globalLevel = 1;
      for (let i = 0; i < worlds.length; i++) { 
          let w = worlds[i]; let start = globalLevel; let end = globalLevel + 99;
          await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', w.id), { id: w.id, name: w.name, icon: w.icon, start: start, end: end, rewardTitle: w.rewardTitle, top10Reward: w.top10Reward, finishersCount: 0 });
+         
          let proms = [];
          for(let lvl = start; lvl <= end; lvl++){
              let shardsReward = 20 + Math.floor(lvl / 5);
-             proms.push(window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+lvl), { num: lvl, world: w.id, q: `لغز المرحلة رقم ${lvl}`, a: 'حل', shards: shardsReward }));
+             let wordPool = lvl <= 300 ? easyWords : (lvl <= 700 ? medWords : hardWords);
+             let answer = wordPool[Math.floor(Math.random() * wordPool.length)];
+             let question = lvl <= 300 ? `المرحلة ${lvl}: استخرج الكلمة البسيطة المرتبطة بالطبيعة:` : (lvl <= 700 ? `المرحلة ${lvl}: كلمة متوسطة الصعوبة، ما هي؟` : `المرحلة ${lvl}: لغز معقد جداً، استخرج الكلمة المخفية!`);
+             
+             proms.push(window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+lvl), { num: lvl, world: w.id, q: question, a: answer, shards: shardsReward }));
+             
+             if (proms.length >= 50) {
+                 await Promise.all(proms);
+                 proms = [];
+             }
          }
-         await Promise.all(proms);
+         if(proms.length > 0) await Promise.all(proms);
          globalLevel = end + 1;
      }
      showToast("تم توليد 10 عوالم و 1000 مرحلة بنجاح ساحق!", "🔥", "success");
-   } catch(e) { showToast("خطأ أثناء التوليد", "❌", "error"); }
+   } catch(e) { console.log(e); showToast("خطأ أثناء التوليد", "❌", "error"); }
 }
 
 async function adminSaveLevel() {
