@@ -531,11 +531,13 @@
       }
       window.updateUIForAuth();
       
-      // التخلص من شاشة التحميل بعد التأكد من تسجيل الدخول
+// إخفاء شاشة التحميل بالقوة والتوجه للرئيسية مباشرة
       setTimeout(() => {
-          if (screenHistory[screenHistory.length - 1] === 'splash') {
-              navigateTo('home');
+          const splashScreen = document.getElementById('screen-splash');
+          if (splashScreen) {
+              splashScreen.classList.add('hidden');
           }
+          navigateTo('home');
       }, 800);
     });
   </script>
