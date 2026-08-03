@@ -1,1 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لغزك - Lghzak</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- الشريط العلوي للعبة -->
+    <header>
+        <div class="logo-container">
+            <img id="appIcon" src="default-icon.png" alt="أيقونة اللعبة">
+            <h1>لغزك</h1>
+        </div>
+        <div class="user-stats">
+            <span id="userGems">💎 0</span>
+            <span id="userShards">🧩 0</span>
+            <span id="userMoney">🪙 0</span>
+        </div>
+    </header>
 
+    <!-- شريط التنقل السفلي -->
+    <nav>
+        <button onclick="showSection('worlds')">العوالم</button>
+        <button onclick="showSection('store')">المتجر</button>
+        <button onclick="showSection('profile')">البروفايل</button>
+        <button onclick="showSection('search')">البحث</button>
+        <button id="adminBtn" class="hidden" onclick="showSection('admin')">لوحة المالك</button>
+    </nav>
+
+    <!-- المحتوى الرئيسي -->
+    <main>
+        <!-- قسم العوالم (10 عوالم و 1000 مرحلة) -->
+        <section id="worlds" class="active">
+            <h2>عالم الألغاز (10 عوالم / 1000 مرحلة)</h2>
+            <p>اختر العالم للبدء وتجاوز المراحل للحصول على الألقاب والـ XP!</p>
+            <div id="worldsList" class="grid-container"></div>
+        </section>
+
+        <!-- قسم المتجر والصناديق -->
+        <section id="store" class="hidden">
+            <h2>متجر العناصر الصندوقية</h2>
+            <div id="storeItems" class="grid-container"></div>
+            <h3>صناديق الحظ المتعددة الندرة</h3>
+            <div id="boxesList" class="grid-container"></div>
+        </section>
+
+        <!-- قسم البروفايل المميز -->
+        <section id="profile" class="hidden">
+            <div class="profile-card">
+                <h2 id="profileName">اسم اللاعب</h2>
+                <div id="ownerBadge" class="hidden">👑 Owner (المالك)</div>
+                <p id="playerTitle">اللقب الحالي: <span>مبتدئ</span></p>
+                <p>نقاط الـ XP: <span id="playerXP">0</span></p>
+                <div id="profileItemsContainer">
+                    <h3>عناصر البروفايل والأفاتار المخصصة</h3>
+                    <div id="profileItemsList" class="grid-container"></div>
+                </div>
+                <div class="redeem-section">
+                    <h3>استرداد الأكواد والجوائز</h3>
+                    <input type="text" id="promoCode" placeholder="أدخل الكود هنا (ألقاب، قوالب، عناصر)">
+                    <button onclick="redeemCode()">استرداد الكود</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- قسم البحث والمفضلين -->
+        <section id="search" class="hidden">
+            <h2>البحث عن اللاعبين</h2>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="ابحث باسم اللاعب...">
+                <button onclick="searchUsers()">بحث</button>
+            </div>
+            <div id="searchResults"></div>
+            <h3>قائمة المفضلين لديك</h3>
+            <div id="favoriteUsers"></div>
+        </section>
+
+        <!-- قسم لوحة تحكم المالك (Admin Panel) -->
+        <section id="admin" class="hidden">
+            <h2>لوحة تحكم المالك الشاملة 👑</h2>
+            
+            <div class="admin-module">
+                <h3>تعديل جوائز ونقاط XP لكل مرحلة</h3>
+                <input type="number" id="stageIdInput" placeholder="رقم المرحلة (1 إلى 1000)">
+                <input type="number" id="stageXpInput" placeholder="قيمة الـ XP">
+                <input type="text" id="stageRewardInput" placeholder="الجائزة (قالب، لقب، عنصر)">
+                <button onclick="adminUpdateStage()">حفظ إعدادات المرحلة</button>
+            </div>
+
+            <div class="admin-module">
+                <h3>إضافة أو حذف عناصر المتجر</h3>
+                <input type="text" id="storeItemNameInput" placeholder="اسم العنصر الجديد">
+                <input type="number" id="storeItemPriceInput" placeholder="سعر العنصر">
+                <button onclick="adminAddStoreItem()">إضافة عنصر للمتجر</button>
+                <button onclick="adminRemoveStoreItem()" class="danger-btn">حذف عنصر من المتجر</button>
+            </div>
+
+            <div class="admin-module">
+                <h3>إنشاء أكواد هدايا جديدة (ألقاب وقوالب وأفاتار)</h3>
+                <input type="text" id="adminCodeInput" placeholder="كود الهدية (مثال: LEGEND2026)">
+                <select id="adminCodeRewardType">
+                    <option value="title">لقب مميز</option>
+                    <option value="avatar">قالب أفاتار</option>
+                    <option value="item">عصر نادر</option>
+                </select>
+                <input type="text" id="adminCodeValueInput" placeholder="قيمة الجائزة (اسم اللقب أو القالب)">
+                <button onclick="adminCreateCode()">إنشاء الكود وإضافته</button>
+            </div>
+
+            <div class="admin-module">
+                <h3>تغيير أيقونة وصورة التطبيق</h3>
+                <input type="text" id="adminIconUrlInput" placeholder="رابط الصورة الجديدة للأيقونة">
+                <button onclick="adminChangeAppIcon()">تحديث صورة التطبيق</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
