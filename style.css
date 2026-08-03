@@ -1,114 +1,271 @@
-:root {
-  --bg-dark: #020617;
-  --card-bg: rgba(15, 23, 42, 0.75);
-  --primary-cyan: #06b6d4;
-  --primary-amber: #f59e0b;
-  --gold-primary: #f59e0b;
-  --gold-glow: rgba(245, 158, 11, 0.4);
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
-  background-color: var(--bg-dark);
-  font-family: 'Cairo', sans-serif;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* 👑 بروفايل المالك الذهبي */
-.owner-card-gold {
-  background: linear-gradient(135deg, rgba(35, 25, 5, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%) !important;
-  border: 2px solid #f59e0b !important;
-  box-shadow: 0 0 25px var(--gold-glow), inset 0 0 15px rgba(245, 158, 11, 0.2) !important;
-}
-
-.owner-tag {
-  background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
-  color: #020617;
-  font-weight: 900;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
-  border: 1px solid #fef08a;
-}
-
-/* 🔮 Glassmorphism Cards */
-.glass-card {
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-}
-
-/* 🔘 3D Buttons */
-.btn-3d-green {
-  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-  box-shadow: 0 4px 0 #15803d, 0 8px 15px rgba(34, 197, 94, 0.3);
-  transition: all 0.1s ease;
-}
-
-.btn-3d-green:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 #15803d;
-}
-
-.btn-3d-orange {
-  background: linear-gradient(180deg, #f97316 0%, #ea580c 100%);
-  box-shadow: 0 4px 0 #c2410c, 0 8px 15px rgba(249, 115, 22, 0.3);
-  transition: all 0.1s ease;
-}
-
-.btn-3d-orange:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 #c2410c;
-}
-
-/* 🧩 حروف وسلوتات الألغاز */
-.letter-slot {
-  width: 44px;
-  height: 48px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 2px solid rgba(6, 182, 212, 0.4);
-  border-radius: 12px;
+  background-color: #0f0f12;
+  color: #f1f1f1;
   display: flex;
-  align-items: center;
   justify-content: center;
-  font-weight: 900;
-  font-size: 1.25rem;
-  color: #38bdf8;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
-  cursor: pointer;
+  padding: 15px;
 }
 
-.letter-btn {
-  width: 42px;
-  height: 46px;
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-bottom: 3px solid #0284c7;
-  border-radius: 12px;
+.app-container {
+  width: 100%;
+  max-width: 500px;
+  background: #18181c;
+  border-radius: 16px;
+  padding: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  border: 1px solid #2a2a32;
+}
+
+/* الشريط العلوي والتنقل */
+.top-bar {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
+  flex-direction: column;
+  gap: 10px;
+  background: #22222a;
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+.user-resources {
+  display: flex;
+  justify-content: space-around;
   font-size: 1.1rem;
-  color: #ffffff;
+  font-weight: bold;
+  background: #18181c;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.main-nav {
+  display: flex;
+  gap: 5px;
+}
+
+.nav-btn {
+  flex: 1;
+  background: #2c2c38;
+  color: #ccc;
+  border: none;
+  padding: 8px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.nav-btn.active {
+  background: #6c5ce7;
+  color: #fff;
+}
+
+.admin-badge {
+  background: #d63031 !important;
+  color: white;
+}
+
+/* تسجيل الدخول */
+.card {
+  background: #22222a;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.btn-gmail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: #fff;
+  color: #222;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  font-weight: bold;
   cursor: pointer;
 }
 
-.hidden-letter {
-  opacity: 0;
+.btn-gmail img { width: 18px; }
+
+/* العوالم والمراحل */
+.world-block {
+  background: #22222a;
+  border: 1px solid #333340;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.world-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #333340;
+  padding-bottom: 5px;
+}
+
+.stages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stage-card {
+  background: #18181c;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reward-tag {
+  font-size: 0.8rem;
+  color: #00b894;
+}
+
+/* الشبكة للبروفايل والمتجر */
+.sub-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0;
+  overflow-x: auto;
+}
+
+.sub-tabs button {
+  background: #2c2c38;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.sub-tabs button.active {
+  background: #00b894;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.item-card {
+  background: #22222a;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.item-card img {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  object-fit: cover;
+  margin: 5px 0;
+}
+
+/* البروفايل والمعاينة */
+.profile-card {
+  background: #22222a;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.banner-box {
+  height: 90px;
+  background: #333340;
+  background-size: cover;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+}
+
+.avatar-wrap {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  margin-bottom: -35px;
+}
+
+#prof-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid #18181c;
+}
+
+.frame-box {
+  position: absolute;
+  top: -5px; left: -5px; right: -5px; bottom: -5px;
+  border-radius: 50%;
   pointer-events: none;
 }
 
-@keyframes popIn {
-  0% { transform: scale(0.8); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+.frame-gold { border: 4px solid #ffd700; box-shadow: 0 0 8px #ffd700; }
+.frame-neon { border: 4px solid #00cef6; box-shadow: 0 0 8px #00cef6; }
+
+.prof-info {
+  padding-top: 40px;
+  padding-bottom: 12px;
 }
 
-.animate-pop {
-  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+.title-tag {
+  background: #6c5ce7;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.8rem;
 }
 
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: rgba(2, 6, 23, 0.8); }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 10px; }
+/* لوحة المالك */
+.admin-card {
+  background: #22222a;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-card input, .admin-card select {
+  background: #18181c;
+  border: 1px solid #3a3a4c;
+  color: #fff;
+  padding: 8px;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.reward-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.85rem;
+}
+
+.btn-success { background: #00b894; color: #fff; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.btn-danger-sm { background: #d63031; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.btn-play { background: #0984e3; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+
+.hidden { display: none !important; }
