@@ -241,6 +241,10 @@ function updateUI() {
   document.getElementById('profile-account-level-txt').innerText = `مستوى الحساب: ${player.accLevel}`;
   document.getElementById('crate-acc-level').innerText = `مستواك: ${player.accLevel}`;
   
+  const xpPercentage = ((player.currentLevel - 1) % 10) * 10;
+  const xpBar = document.getElementById('profile-xp-bar');
+  if(xpBar) xpBar.style.width = `${xpPercentage}%`;
+  
   document.getElementById('profile-title-badge').innerText = player.equippedTitle; document.getElementById('profile-avatar-img').src = player.equippedAvatar;
   document.getElementById('profile-frame-wrap').className = `relative mb-3 group rounded-full ${getFrameClass(player.equippedFrame)}`;
   if(player.equippedFrame === 'أسطوري') document.getElementById('profile-frame-wrap').classList.add('frame-mythic-wrap');
@@ -292,6 +296,11 @@ async function handleEmailLogin() {
   const email = document.getElementById('auth-email-input').value.trim();
   const pass = document.getElementById('auth-pass-input').value;
   if(!email || !pass) return showToast("أدخل البيانات", "⚠️", "error");
+  
+  const btn = document.querySelector('#modal-auth button[onclick="handleEmailLogin()"]');
+  const origText = btn.innerText;
+  btn.innerText = "جاري الدخول ⏳...";
+  
   try { 
       const cred = await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass); 
       await window.loadPlayerData(cred.user);
@@ -308,6 +317,8 @@ async function handleEmailLogin() {
       } catch(err) { 
           showToast("الرقم السري خاطئ أو البريد مستخدم", "❌", "error"); 
       }
+  } finally {
+      btn.innerText = origText;
   }
 }
 
@@ -320,17 +331,6 @@ async function handleGoogleLogin() {
         closeModal('modal-auth'); 
         showToast("تم الدخول بنجاح", "✅", "success"); 
     } catch(e) { showToast("فشل", "❌", "error"); } 
-}
-
-async function handleFacebookLogin() {
-    try {
-        const provider = new window.FacebookAuthProvider();
-        const cred = await window.signInWithPopup(window.firebaseAuth, provider);
-        await window.loadPlayerData(cred.user);
-        window.updateUIForAuth();
-        closeModal('modal-auth');
-        showToast("تم الدخول بحساب فيسبوك بنجاح", "✅", "success");
-    } catch(e) { showToast("فشل الدخول بفيسبوك", "❌", "error"); }
 }
 
 async function handleAnonymousLogin() { 
@@ -677,7 +677,10 @@ function openPublicProfile(uid) {
    document.getElementById('pub-title-badge').innerText = viewedUser.equippedTitle || 'مستكشف الألغاز';
    document.getElementById('pub-stat-level').innerText = viewedUser.currentLevel;
    document.getElementById('pub-stat-acclvl').innerText = calcAccLevel(viewedUser.currentLevel);
-   document.getElementById('pub-stat-score').innerText = (viewedUser.currentLevel * 100) + viewedUser.shards;
+   
+   const pubXpPercentage = ((viewedUser.currentLevel - 1) % 10) * 10;
+   const pubXpBar = document.getElementById('pub-xp-bar');
+   if(pubXpBar) pubXpBar.style.width = `${pubXpPercentage}%`;
    
    const fWrap = document.getElementById('pub-frame-wrap');
    fWrap.className = `relative mb-3 rounded-full ${getFrameClass(viewedUser.equippedFrame)}`;
@@ -867,6 +870,22 @@ async function adminGenerateMassiveGame() {
    }
 }
 
+async function adminLoadLevelForEdit() {
+    const num = document.getElementById('adm-lvl-num').value;
+    if(!num) return showToast("أدخل رقم المرحلة للبحث", "⚠️", "error");
+    const lvl = dbLevels.find(l => l.num == num);
+    if(lvl) {
+        document.getElementById('adm-lvl-world').value = lvl.world;
+        document.getElementById('adm-lvl-question').value = lvl.q;
+        document.getElementById('adm-lvl-answer').value = lvl.a;
+        document.getElementById('adm-lvl-shards').value = lvl.shards;
+        if(document.getElementById('adm-lvl-img')) document.getElementById('adm-lvl-img').value = lvl.img || '';
+        showToast("تم جلب بيانات المرحلة للتعديل", "✅", "success");
+    } else {
+        showToast("المرحلة غير موجودة، يمكنك إضافتها", "💡", "info");
+    }
+}
+
 async function adminSaveLevel() {
    const num = parseInt(document.getElementById('adm-lvl-num').value), 
          world = document.getElementById('adm-lvl-world').value, 
@@ -876,7 +895,7 @@ async function adminSaveLevel() {
          img = (document.getElementById('adm-lvl-img') ? document.getElementById('adm-lvl-img').value.trim() : '');
          
    if(!num || !world || !q || !a) return showToast("أكمل البيانات", "⚠️", "error");
-   try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+num), { num, world, q, a, shards, img }); showToast("تم الإضافة", "➕", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }
+   try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+num), { num, world, q, a, shards, img }); showToast("تم الإضافة/التعديل بنجاح", "✅", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }
 }
 
 function updateShopInputPlaceholder() {
