@@ -1,5 +1,5 @@
 // ==========================================
-// 📌 1. الإعدادات والمتغيرات العامة
+// 📌 1. المتغيرات والإعدادات العامة
 // ==========================================
 const OWNER_EMAIL = "mohammedabudayya2011@gmail.com";
 window.DB_PATH = window.DB_PATH || "";
@@ -8,11 +8,7 @@ let screenHistory = ['home'];
 let allUsers = [];
 let dbWorlds = [];
 let dbLevels = [];
-let dbCrates = [
-  { id: 'crate_bronze', name: 'الصندوق البرونزي', icon: '📦', cost: 10, rewardShards: 25 },
-  { id: 'crate_silver', name: 'الصندوق الفضي', icon: '🎁', cost: 25, rewardShards: 70 },
-  { id: 'crate_gold', name: 'الصندوق الذهبي الأسطوري', icon: '👑', cost: 50, rewardShards: 160 }
-];
+let dbCrates = [];
 
 let inspectedUser = null;
 window.listenersActive = false;
@@ -52,7 +48,11 @@ window.getDisplayShards = function() { return window.isOwner() ? "∞" : player.
 window.openModal = function(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); };
 window.closeModal = function(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); };
 window.openAuthModal = function() { window.openModal('modal-auth'); };
-window.openChangeNameModal = function() { window.openModal('modal-change-name'); };
+window.openChangeNameModal = function() { 
+  const nameInput = document.getElementById('new-name-input');
+  if (nameInput) nameInput.value = player.name;
+  window.openModal('modal-change-name'); 
+};
 
 window.showToast = function(msg, icon = '✨', type = 'info') {
   const toast = document.getElementById('toast-msg');
@@ -70,10 +70,254 @@ window.showToast = function(msg, icon = '✨', type = 'info') {
 };
 
 // ==========================================
-// 👑 3. أدوات المالك المطلوبة (الهدايا، الأكواد، التصميم، العداد)
+// 🔐 3. تسجيل الدخول والتسجيل وتعديل الاسم
 // ==========================================
 
-// إرسال هدية للجميع
+// تسجيل الدخول / إنشاء الحساب بالبريد وكلمة السر
+window.handleEmailLogin = async function() {
+  const emailInput = document.getElementById('auth-email-input');
+  const passInput = document.getElementById('auth-pass-input');
+  
+  const email = emailInput ? emailInput.value.trim() : '';
+  const pass = passInput ? passInput.value.trim() : '';
+
+  if (!email || !pass) {
+    return window.showToast("يرجى كتابة البريد الإلكتروني وكلمة المرور", "⚠️", "error");
+  }
+  if (pass.length < 6) {
+    return window.showToast("كلمة المرور يجب أن تكون 6 خانات على الأقل", "⚠️", "error");
+  }
+
+  window.showToast("جاري تسجيل الدخول...", "⏳", "info");
+
+  try {
+    // محاولة الدخول أولاً
+    await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass);
+    window.showToast("تم الدخول بنجاح! 🚀", "✅", "success");
+    window.closeModal('modal-auth');
+  } catch(e) {
+    // إذا كان الحساب غير موجود، يتم إنشاؤه تلقائياً
+    try {
+      await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass);
+      window.showToast("تم إنشاء الحساب والدخول بنجاح! 🎉", "✅", "success");
+      window.closeModal('modal-auth');
+    } catch(err) {
+      window.showToast("خطأ في الدخول/الإنشاء: " + err.message, "❌", "error");
+    }
+  }
+};
+
+// الدخول بـ Google
+window.handleGoogleLogin = async function() {
+  try {
+    const provider = new window.GoogleAuthProvider();
+    await window.signInWithPopup(window.firebaseAuth, provider);
+    window.showToast("تم الدخول بحساب Google! 🚀", "✅", "success");
+    window.closeModal('modal-auth');
+  } catch(e) {
+    window.showToast("فشل الدخول بـ Google: " + e.message, "❌", "error");
+  }
+};
+
+// حفظ اسم المستخدم الجديد
+window.saveNewUsername = async function() {
+  const nameInput = document.getElementById('new-name-input');
+  const newName = nameInput ? nameInput.value.trim() : '';
+
+  if (!newName) {
+    return window.showToast("أدخل اسماً صالحاً!", "⚠️", "error");
+  }
+
+  player.name = newName;
+  await savePlayer();
+  updateUI();
+  window.closeModal('modal-change-name');
+  window.showToast("تم تحديث الاسم بنجاح! ✨", "✅", "success");
+};
+
+// ==========================================
+// 👑 4. أدوات المالك المطلوبة (المتجر، المراحل، الخلفية)
+// ==========================================
+
+// أ) إدارة المتجر والصناديق (إضافة وحذف)
+window.adminAddCrate = async function() {
+  const name = document.getElementById('adm-crate-name').value.trim();
+  const icon = document.getElementById('adm-crate-icon').value.trim() || '📦';
+  const cost = parseInt(document.getElementById('adm-crate-cost').value) || 0;
+  const reward = parseInt(document.getElementById('adm-crate-reward').value) || 0;
+
+  if (!name || cost <= 0) {
+    return window.showToast("يرجى إدخال اسم وسعر المنتج", "⚠️", "error");
+  }
+
+  const crateId = 'crate_' + Date.now();
+  try {
+    await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'crates', crateId), {
+      id: crateId,
+      name: name,
+      icon: icon,
+      cost: cost,
+      rewardShards: reward
+    });
+    window.showToast("تمت إضافة المنتج للمتجر! 🎉", "✅", "success");
+  } catch(e) {
+    window.showToast("فشل إضافة المنتج للمتجر", "❌", "error");
+  }
+};
+
+window.adminDeleteCrate = async function(crateId) {
+  try {
+    await window.deleteDoc(window.doc(window.firebaseDb, window.DB_PATH + 'crates', crateId));
+    window.showToast("تم حذف المنتج من المتجر", "🗑️", "info");
+  } catch(e) {
+    window.showToast("فشل حذف المنتج", "❌", "error");
+  }
+};
+
+// ب) إضافة وحذف العوالم والمراحل
+window.adminAddWorld = async function() {
+  const num = parseInt(document.getElementById('adm-world-num').value);
+  const name = document.getElementById('adm-world-name').value.trim();
+  const icon = document.getElementById('adm-world-icon').value.trim() || '🌲';
+
+  if (!num || !name) return window.showToast("أدخل رقم واسم العالم", "⚠️", "error");
+
+  try {
+    await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', `world_${num}`), {
+      num: num,
+      name: name,
+      icon: icon,
+      start: ((num - 1) * 100) + 1,
+      end: num * 100
+    });
+    window.showToast(`تمت إضافة العالم ${num} بنجاح! 🌍`, "✅", "success");
+  } catch(e) {
+    window.showToast("فشل إضافة العالم", "❌", "error");
+  }
+};
+
+window.adminAddLevel = async function() {
+  const num = parseInt(document.getElementById('adm-level-num').value);
+  const q = document.getElementById('adm-level-q').value.trim();
+  const a = document.getElementById('adm-level-a').value.trim();
+
+  if (!num || !q || !a) return window.showToast("أدخل رقم المرحلة والسؤال والإجابة", "⚠️", "error");
+
+  try {
+    await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', `lvl_${num}`), {
+      num: num, q: q, a: a
+    });
+    window.showToast(`تمت إضافة المرحلة رقم ${num}! 🧩`, "✅", "success");
+  } catch(e) {
+    window.showToast("فشل إضافة المرحلة", "❌", "error");
+  }
+};
+
+window.adminDeleteAllWorlds = async function() {
+  if (!confirm("هل أنت تأكد من مسح جميع العوالم؟")) return;
+  try {
+    const snap = await window.getDocs(window.collection(window.firebaseDb, window.DB_PATH + 'worlds'));
+    for (const d of snap.docs) {
+      await window.deleteDoc(d.ref);
+    }
+    window.showToast("تم مسح كافة العوالم بنجاح", "🗑️", "success");
+  } catch(e) {
+    window.showToast("حدث خطأ أثناء المسح", "❌", "error");
+  }
+};
+
+window.adminDeleteAllLevels = async function() {
+  if (!confirm("هل أنت تأكد من مسح جميع المراحل؟")) return;
+  try {
+    const snap = await window.getDocs(window.collection(window.firebaseDb, window.DB_PATH + 'levels'));
+    for (const d of snap.docs) {
+      await window.deleteDoc(d.ref);
+    }
+    window.showToast("تم مسح كافة المراحل بنجاح", "🗑️", "success");
+  } catch(e) {
+    window.showToast("حدث خطأ أثناء المسح", "❌", "error");
+  }
+};
+
+// ج) توليد 10 عوالم و 1000 مرحلة مع شريط العداد التفاعلي (بدون تجميد)
+window.adminGenerateMassiveGameWithProgress = async function() {
+  const progressBox = document.getElementById('admin-progress-box');
+  const progressBar = document.getElementById('admin-progress-bar');
+  const progressText = document.getElementById('admin-progress-text');
+  const progressPercent = document.getElementById('admin-progress-percent');
+
+  if (progressBox) progressBox.classList.remove('hidden');
+
+  const worldIcons = ['🌲', '⏳', '❄️', '🔥', '🏰', '⚡', '🌌', '🐉', '💎', '👑'];
+  const worldNames = ['عالم البداية', 'عالم الصحراء', 'عالم الجليد', 'عالم البركان', 'عالم القلعة', 'عالم العاصفة', 'عالم الفضاء', 'عالم التنين', 'عالم الألماسة', 'عالم الملوك'];
+
+  try {
+    // 1. توليد العوالم العشرة
+    for (let i = 0; i < 10; i++) {
+      const wNum = i + 1;
+      const wData = {
+        num: wNum,
+        name: worldNames[i],
+        icon: worldIcons[i],
+        start: (i * 100) + 1,
+        end: (i + 1) * 100
+      };
+      await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', `world_${wNum}`), wData);
+    }
+
+    // 2. توليد 1000 مرحلة مع العداد المباشر
+    const totalLevels = 1000;
+    const arabicWords = ["بيت", "شمس", "قمر", "نجم", "جبل", "بحر", "نهر", "ورد", "سيف", "قلم"];
+
+    for (let l = 1; l <= totalLevels; l++) {
+      const word = arabicWords[(l - 1) % arabicWords.length];
+      const levelData = {
+        num: l,
+        q: `ما هي الكلمة المعبرة عن الصورة أو الرمز رقم (${l})؟`,
+        a: word
+      };
+
+      await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', `lvl_${l}`), levelData);
+
+      // تحديث واجهة المستخدم بالعداد عبر مهلة تسمح بالرسم
+      if (l % 10 === 0 || l === totalLevels) {
+        const percent = Math.floor((l / totalLevels) * 100);
+        if (progressBar) progressBar.style.width = `${percent}%`;
+        if (progressPercent) progressPercent.innerText = `${percent}%`;
+        if (progressText) progressText.innerText = `جاري إنشاء المرحلة ${l} من ${totalLevels}...`;
+        await new Promise(res => setTimeout(res, 5));
+      }
+    }
+
+    if (progressText) progressText.innerText = "تم اكتمال توليد 10 عوالم و 1000 مرحلة بنجاح! 🎉";
+    window.showToast("تم توليد 10 عوالم و 1000 مرحلة بالكامل! 🚀", "✅", "success");
+  } catch(e) {
+    console.error(e);
+    window.showToast("حدث خطأ أثناء التوليد: " + e.message, "❌", "error");
+  }
+};
+
+// د) حفظ وتغيير خلفية التطبيق والمظهر
+window.adminSaveDesignAndSplash = async function() {
+  const title = document.getElementById('adm-splash-title-input').value.trim();
+  const splashImg = document.getElementById('adm-splash-img-input').value.trim();
+  const bgUrl = document.getElementById('adm-bg-url-input').value.trim();
+
+  try {
+    await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), {
+      splashTitle: title || 'لغزك',
+      splashImgUrl: splashImg || '',
+      bgUrl: bgUrl || ''
+    }, { merge: true });
+
+    applyGlobalSettings({ splashTitle: title, splashImgUrl: splashImg, bgUrl: bgUrl });
+    window.showToast("تم حفظ خلفية التطبيق والمظهر للجميع! 🎨", "✅", "success");
+  } catch(e) {
+    window.showToast("فشل حفظ المظهر", "❌", "error");
+  }
+};
+
+// هـ) إرسال الهدايا والأكواد
 window.adminSendGiftToAll = async function() {
   const shards = parseInt(document.getElementById('adm-gift-shards').value) || 0;
   const gems = parseInt(document.getElementById('adm-gift-gems').value) || 0;
@@ -91,13 +335,12 @@ window.adminSendGiftToAll = async function() {
         });
       }
     }
-    window.showToast("تم توزيع الهدايا على جميع اللاعبين بنجاح! 🎁", "✅", "success");
+    window.showToast("تم توزيع الهدايا للجميع بنجاح! 🎁", "✅", "success");
   } catch(e) {
-    window.showToast("حدث خطأ أثناء إرسال الهدايا", "❌", "error");
+    window.showToast("حدث خطأ أثناء الإرسال", "❌", "error");
   }
 };
 
-// إرسال هدية للاعب معين
 window.adminSendGiftToSpecificUser = async function() {
   const targetVal = document.getElementById('adm-gift-target-uid').value.trim();
   const shards = parseInt(document.getElementById('adm-gift-shards').value) || 0;
@@ -120,7 +363,6 @@ window.adminSendGiftToSpecificUser = async function() {
   }
 };
 
-// إنشاء كود هدية للجميع
 window.adminCreatePromoCode = async function() {
   const code = document.getElementById('adm-code-text').value.trim().toUpperCase();
   const shards = parseInt(document.getElementById('adm-code-shards').value) || 0;
@@ -139,7 +381,6 @@ window.adminCreatePromoCode = async function() {
   }
 };
 
-// كبسة استخدام الكود من قبل اللاعبين
 window.redeemCode = async function() {
   const input = document.getElementById('redeem-code-input');
   if (!input) return;
@@ -166,86 +407,6 @@ window.redeemCode = async function() {
   }
 };
 
-// حفظ التصميم وشاشة التحميل
-window.adminSaveDesignAndSplash = async function() {
-  const title = document.getElementById('adm-splash-title-input').value.trim();
-  const splashImg = document.getElementById('adm-splash-img-input').value.trim();
-  const bgUrl = document.getElementById('adm-bg-url-input').value.trim();
-
-  try {
-    await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), {
-      splashTitle: title || 'لغزك',
-      splashImgUrl: splashImg || '',
-      bgUrl: bgUrl || ''
-    }, { merge: true });
-
-    applyGlobalSettings({ splashTitle: title, splashImgUrl: splashImg, bgUrl: bgUrl });
-    window.showToast("تم تحديث مظهر اللعبة وشاشة التحميل! 🎨", "✅", "success");
-  } catch(e) {
-    window.showToast("فشل حفظ المظهر", "❌", "error");
-  }
-};
-
-// زر التحديث الفوري القوي للأحداث
-window.adminTriggerEventUpdate = function() {
-  window.showToast("تم إطلاق تحديث الأحداث الفوري لجميع الأجهزة! ⚡", "🚀", "success");
-  window.setupRealtimeListeners();
-};
-
-// توليد 10 عوالم و 1000 مرحلة مع العداد المباشر
-window.adminGenerateMassiveGameWithProgress = async function() {
-  const progressBox = document.getElementById('admin-progress-box');
-  const progressBar = document.getElementById('admin-progress-bar');
-  const progressText = document.getElementById('admin-progress-text');
-  const progressPercent = document.getElementById('admin-progress-percent');
-
-  if (progressBox) progressBox.classList.remove('hidden');
-
-  const worldIcons = ['🌲', '⏳', '❄️', '🔥', '🏰', '⚡', '🌌', '🐉', '💎', '👑'];
-  const worldNames = ['عالم البداية', 'عالم الصحراء', 'عالم الجليد', 'عالم البركان', 'عالم القلعة', 'عالم العاصفة', 'عالم الفضاء', 'عالم التنين', 'عالم الألماسة', 'عالم الملوك'];
-
-  try {
-    // 1. توليد العوالم
-    for (let i = 0; i < 10; i++) {
-      const wNum = i + 1;
-      const wData = {
-        num: wNum,
-        name: worldNames[i],
-        icon: worldIcons[i],
-        start: (i * 100) + 1,
-        end: (i + 1) * 100
-      };
-      await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', `world_${wNum}`), wData);
-    }
-
-    // 2. توليد 1000 مرحلة مع شريط التقدم
-    const totalLevels = 1000;
-    const arabicWords = ["بيت", "شمس", "قمر", "نجم", "جبل", "بحر", "نهر", "ورد", "سيف", "قلم"];
-
-    for (let l = 1; l <= totalLevels; l++) {
-      const word = arabicWords[(l - 1) % arabicWords.length];
-      const levelData = {
-        num: l,
-        q: `ما هي الكلمة المعبرة عن الصورة أو الرمز رقم (${l})؟`,
-        a: word
-      };
-
-      await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', `lvl_${l}`), levelData);
-
-      // تحديث العداد المباشر
-      const percent = Math.floor((l / totalLevels) * 100);
-      if (progressBar) progressBar.style.width = `${percent}%`;
-      if (progressPercent) progressPercent.innerText = `${percent}%`;
-      if (progressText) progressText.innerText = `جاري إنشاء المرحلة ${l} من ${totalLevels}...`;
-    }
-
-    if (progressText) progressText.innerText = "تم اكتمال توليد 1000 مرحلة بنجاح! 🎉";
-    window.showToast("تم توليد 10 عوالم و 1000 مرحلة بالكامل! 🚀", "✅", "success");
-  } catch(e) {
-    window.showToast("حدث خطأ أثناء التوليد", "❌", "error");
-  }
-};
-
 function applyGlobalSettings(data) {
   if (!data) return;
   if (data.splashTitle) {
@@ -263,12 +424,19 @@ function applyGlobalSettings(data) {
   }
   if (data.bgUrl) {
     const appContainer = document.getElementById('app-container');
-    if (appContainer) appContainer.style.backgroundImage = `url('${data.bgUrl}')`;
+    if (appContainer) {
+      appContainer.style.backgroundImage = `url('${data.bgUrl}')`;
+      appContainer.style.backgroundSize = 'cover';
+      appContainer.style.backgroundPosition = 'center';
+    }
+    document.body.style.backgroundImage = `url('${data.bgUrl}')`;
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
   }
 }
 
 // ==========================================
-// 📱 4. التنقل والمزامنة
+// 📱 5. التنقل واللوحة
 // ==========================================
 window.navigateTo = function(screenId) {
   document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
@@ -322,29 +490,48 @@ function updateNavStyles(activeScreen) {
 }
 
 // ==========================================
-// 📦 5. عرض وفتح الصناديق
+// 📦 6. عرض وفتح المنتجات والمتجر
 // ==========================================
 function renderCrates() {
   const container = document.getElementById('crates-grid');
   if (!container) return;
   container.innerHTML = '';
 
+  if (dbCrates.length === 0) {
+    container.innerHTML = `<div class="text-center text-xs text-gray-400 py-8">المتجر فارغ حالياً.</div>`;
+    return;
+  }
+
   dbCrates.forEach(c => {
     container.innerHTML += `
       <div class="glass-card p-5 rounded-3xl border border-amber-500/30 flex items-center justify-between bg-gradient-to-r from-amber-500/10 to-transparent">
         <div class="flex items-center gap-4">
-          <span class="text-4xl animate-bounce">${c.icon}</span>
+          <span class="text-4xl animate-bounce">${c.icon || '📦'}</span>
           <div>
             <h3 class="text-sm font-black text-white">${c.name}</h3>
             <span class="text-xs text-amber-400 font-bold">يعطي +${c.rewardShards} شظية 🧩</span>
           </div>
         </div>
         <button onclick="openCrate('${c.id}')" class="btn-3d-orange px-4 py-2.5 rounded-2xl text-xs font-black">
-          فتح (${c.cost} 💎)
+          شراء (${c.cost} 💎)
         </button>
       </div>
     `;
   });
+
+  // قائمة الإدارة في لوحة المالك
+  const adminManageList = document.getElementById('adm-crates-manage-list');
+  if (adminManageList && window.isOwner()) {
+    adminManageList.innerHTML = '';
+    dbCrates.forEach(c => {
+      adminManageList.innerHTML += `
+        <div class="bg-black/40 p-2 rounded-xl flex items-center justify-between text-xs border border-white/5">
+          <span>${c.icon} ${c.name} (${c.cost} 💎)</span>
+          <button onclick="adminDeleteCrate('${c.id}')" class="text-red-400 font-bold px-2 py-1">حذف 🗑️</button>
+        </div>
+      `;
+    });
+  }
 }
 
 window.openCrate = async function(crateId) {
@@ -365,11 +552,11 @@ window.openCrate = async function(crateId) {
   await savePlayer();
   updateUI();
   confetti({ particleCount: 100, spread: 60, origin: { y: 0.6 } });
-  window.showToast(`مبروك! فتحت ${crate.name} وحصلت على +${crate.rewardShards} شظية 🎉`, "🎁", "success");
+  window.showToast(`مبروك! حصلت على +${crate.rewardShards} شظية 🎉`, "🎁", "success");
 };
 
 // ==========================================
-// 🔎 6. البحث والبروفايل والمفضلة
+// 🔎 7. البحث والبروفايل والمفضلة
 // ==========================================
 window.handleSearchPlayers = function() {
   const searchInput = document.getElementById('player-search-input');
@@ -513,7 +700,7 @@ function renderFavoritesList() {
 }
 
 // ==========================================
-// 🎮 7. اللعب وتحديث واجهة المستخدم
+// 🎮 8. اللعب وتحديث واجهة المستخدم
 // ==========================================
 window.loadPlayerData = async (user) => {
   try {
@@ -546,6 +733,13 @@ window.setupRealtimeListeners = () => {
 
   window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'levels'), (snap) => {
     dbLevels = snap.docs.map(d => d.data()).sort((a,b) => a.num - b.num);
+  });
+
+  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'crates'), (snap) => {
+    dbCrates = snap.docs.map(d => d.data());
+    if (screenHistory[screenHistory.length - 1] === 'crates' || screenHistory[screenHistory.length - 1] === 'admin') {
+      renderCrates();
+    }
   });
 
   window.onSnapshot(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), (snap) => {
@@ -628,7 +822,7 @@ window.updateUIForAuth = () => {
 
 window.playCurrentLevel = function() {
   const lvl = dbLevels.find(l => l.num == player.currentLevel);
-  if (!lvl) return window.showToast("أنت أسطورة! أنهيت جميع المراحل المتاحة.", "🚀", "info");
+  if (!lvl) return window.showToast("لا توجد مراحل مضافة حالياً أو أنهيت اللعبة بالكامل!", "🚀", "info");
   loadLevel(lvl); 
   window.navigateTo('game');
 };
@@ -714,12 +908,17 @@ function renderWorldsGrid() {
   if (!container) return;
   container.innerHTML = '';
 
+  if (dbWorlds.length === 0) {
+    container.innerHTML = `<div class="text-center text-xs text-gray-400 py-8">لا توجد عوالم مضافة.</div>`;
+    return;
+  }
+
   dbWorlds.forEach(w => {
     const isUnlocked = player.currentLevel >= w.start;
     container.innerHTML += `
       <div class="glass-card p-4 rounded-2xl border border-white/10 flex items-center justify-between ${isUnlocked ? 'opacity-100' : 'opacity-50'}">
         <div class="flex items-center gap-3">
-          <span class="text-3xl">${w.icon}</span>
+          <span class="text-3xl">${w.icon || '🌲'}</span>
           <div>
             <h3 class="text-xs font-black text-white">${w.name}</h3>
             <span class="text-[10px] text-gray-400">المراحل: ${w.start} - ${w.end}</span>
@@ -772,7 +971,7 @@ function renderLeaderboard() {
 }
 
 // ==========================================
-// 🚀 8. التشغيل التلقائي
+// 🚀 9. التشغيل التلقائي
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   window.navigateTo('splash');
