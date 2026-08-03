@@ -78,7 +78,7 @@ window.showToast = function(msg, icon = '✨', type = 'info') {
   else toast.classList.add('border-cyan-500');
   
   toast.classList.remove('-translate-y-10', 'opacity-0');
-  setTimeout(() => { toast.classList.add('-translate-y-10', 'opacity-0'); }, 3000);
+  setTimeout(() => { toast.classList.add('-translate-y-10', 'opacity-0'); }, 3500);
 };
 
 let audioCtx = null;
@@ -201,7 +201,8 @@ window.loadPlayerData = async (user) => {
        player.xp = data.xp || 0;
        player.accLevel = window.calcAccLevel(player.currentLevel);
     } else {
-       let newName = getUniqueName('لاعب');
+       let defaultName = user.displayName || 'لاعب';
+       let newName = getUniqueName(defaultName);
        player = { ...defaultPlayer, uid: user.uid, email: user.email || '', name: newName, accLevel: 1 };
        await window.setDoc(userRef, player);
     }
@@ -310,6 +311,7 @@ window.updateUIForAuth = () => {
       if (loggedSec) loggedSec.classList.remove('hidden');
       if (emailText) emailText.innerText = currentUser.email || player.name || 'حساب مسجل';
       if (homeLoginBanner) homeLoginBanner.classList.add('hidden');
+      
       if (currentUser.email === OWNER_EMAIL) {
           if (adminBtn) adminBtn.classList.remove('hidden');
       } else {
@@ -364,83 +366,73 @@ async function savePlayer() {
 }
 
 // ==========================================
-// 🔑 5. الحسابات وتسجيل الدخول (المعدلة)
+// 🔑 5. الحسابات وتسجيل الدخول (المعدلة بالكامل)
 // ==========================================
 
-// دالة ترجمة أخطاء الفايربيس لتعرف سبب المشكلة فوراً
 function getFirebaseErrorMessage(code) {
   switch (code) {
     case 'auth/invalid-email': return 'البريد الإلكتروني غير صالحة صيغته';
-    case 'auth/wrong-password': return 'كلمة المرور غير صحيحة';
-    case 'auth/email-already-in-use': return 'البريد مستخدم بالفعل';
-    case 'auth/weak-password': return 'كلمة المرور ضعيفة (يجب 6 خانات على الأقل)';
-    case 'auth/operation-not-allowed': return 'هذه طريقة الدخول غير مفعلة في كونسول الفايربيس!';
-    case 'auth/unauthorized-domain': return 'هذا الدومين غير مصرح له بالدخول في الفايربيس!';
-    case 'auth/popup-closed-by-user': return 'تم إغلاق نافذة تسجيل Google قبل الإكمال';
-    default: return 'حدث خطأ أثناء التسجيل: ' + code;
+    case 'auth/wrong-password': return 'كلمة المرور غير صحيحة للحساب الحالي';
+    case 'auth/email-already-in-use': return 'هذا البريد مستخدم مسبقاً بكلمة مرور مختلفة';
+    case 'auth/weak-password': return 'كلمة المرور يجب أن تكون 6 أرقام/أحرف على الأقل';
+    case 'auth/operation-not-allowed': return 'ميزة الدخول هذه غير مفعلة في كونسول الفايربيس!';
+    case 'auth/unauthorized-domain': return 'هذا الرابط غير مضاف للمواقع المصرحة في الفايربيس';
+    case 'auth/popup-closed-by-user': return 'تم إغلاق نافذة اختيار حساب Google قبل الإكمال';
+    default: return 'حدث خطأ في الاتصال: ' + code;
   }
 }
 
+// تسجيل الدخول أو إنشاء حساب جديد تلقائياً إذا لم يكن موجوداً
 window.handleEmailLogin = async function() {
   const email = document.getElementById('auth-email-input').value.trim();
   const pass = document.getElementById('auth-pass-input').value.trim();
 
-  if (!email || !pass) return window.showToast("أدخل البريد وكلمة المرور كاملين", "⚠️", "error");
-  if (pass.length < 6) return window.showToast("كلمة المرور يجب أن تكون 6 خانات/أرقام على الأقل", "⚠️", "error");
+  if (!email || !pass) return window.showToast("أدخل البريد وكلمة المرور كامليْن", "⚠️", "error");
+  if (pass.length < 6) return window.showToast("كلمة المرور يجب أن تكون 6 خانات على الأقل", "⚠️", "error");
 
-  window.showToast("جاري الإتصال...", "⏳", "info");
+  window.showToast("جاري المعالجة...", "⏳", "info");
 
   try { 
-      // 1. تجربة تسجيل الدخول لحساب موجود
+      // 1. تجربة تسجيل الدخول أولاً
       const cred = await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass); 
       await window.loadPlayerData(cred.user);
       window.updateUIForAuth();
       window.closeModal('modal-auth'); 
-      window.showToast("أهلاً بك! تم تسجيل الدخول بنجاح", "✅", "success"); 
+      window.showToast("تم تسجيل الدخول بنجاح 🎉", "✅", "success"); 
   } catch (e) {
-      // 2. إذا لم يكن الحساب موجوداً، يتم إنشاؤه تلقائياً
+      // 2. إذا كان الحساب غير موجود يتم إنشاؤه فوراً
       if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
           try { 
               const cred = await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass); 
               await window.loadPlayerData(cred.user);
               window.updateUIForAuth();
               window.closeModal('modal-auth'); 
-              window.showToast("تم إنشاء حسابك الجديد بنجاح! 🚀", "✅", "success"); 
+              window.showToast("تم إنشاء حسابك الجديد وتسجيل الدخول! 🚀", "✅", "success"); 
           } catch(createErr) {
-              console.error("Create Account Error:", createErr);
               window.showToast(getFirebaseErrorMessage(createErr.code), "❌", "error"); 
           }
       } else {
-          console.error("Login Error:", e);
           window.showToast(getFirebaseErrorMessage(e.code), "❌", "error"); 
       }
   }
 };
 
+// تسجيل الدخول بحساب Google
 window.handleGoogleLogin = async function() { 
   try { 
-      window.showToast("جاري الإتصال بـ Google...", "⏳", "info");
+      window.showToast("جاري فتح حسابات Google...", "⏳", "info");
       const provider = new window.GoogleAuthProvider(); 
+      provider.setCustomParameters({ prompt: 'select_account' });
+      
       const cred = await window.signInWithPopup(window.firebaseAuth, provider); 
       await window.loadPlayerData(cred.user);
       window.updateUIForAuth();
       window.closeModal('modal-auth'); 
       window.showToast("تم الدخول بحساب Google بنجاح 🎉", "✅", "success"); 
   } catch(e) { 
-      console.error("Google Login Error:", e);
+      console.error("Google Auth Error:", e);
       window.showToast(getFirebaseErrorMessage(e.code), "❌", "error"); 
   } 
-};
-
-window.handleGoogleLogin = async function() { 
-    try { 
-        const provider = new window.GoogleAuthProvider(); 
-        const cred = await window.signInWithPopup(window.firebaseAuth, provider); 
-        await window.loadPlayerData(cred.user);
-        window.updateUIForAuth();
-        window.closeModal('modal-auth'); 
-        window.showToast("تم الدخول بحساب Google", "✅", "success"); 
-    } catch(e) { window.showToast("فشل الدخول بحساب Google", "❌", "error"); } 
 };
 
 // ==========================================
@@ -728,7 +720,7 @@ window.adminGenerateMassiveGame = async function() {
 };
 
 // ==========================================
-// 🚀 9. التشغيل التلقائي
+// 🚀 9. التشغيل التلقائي عند فتح اللعبة
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   window.navigateTo('splash');
@@ -737,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.firebaseAuth && window.firebaseDb) {
       clearInterval(checkInterval);
       
-      window.firebaseAuth.onAuthStateChanged(async (user) => {
+      window.onAuthStateChanged(window.firebaseAuth, async (user) => {
         if (user) {
           await window.loadPlayerData(user);
         } else {
