@@ -364,30 +364,72 @@ async function savePlayer() {
 }
 
 // ==========================================
-// 🔑 5. الحسابات وتسجيل الدخول
+// 🔑 5. الحسابات وتسجيل الدخول (المعدلة)
 // ==========================================
+
+// دالة ترجمة أخطاء الفايربيس لتعرف سبب المشكلة فوراً
+function getFirebaseErrorMessage(code) {
+  switch (code) {
+    case 'auth/invalid-email': return 'البريد الإلكتروني غير صالحة صيغته';
+    case 'auth/wrong-password': return 'كلمة المرور غير صحيحة';
+    case 'auth/email-already-in-use': return 'البريد مستخدم بالفعل';
+    case 'auth/weak-password': return 'كلمة المرور ضعيفة (يجب 6 خانات على الأقل)';
+    case 'auth/operation-not-allowed': return 'هذه طريقة الدخول غير مفعلة في كونسول الفايربيس!';
+    case 'auth/unauthorized-domain': return 'هذا الدومين غير مصرح له بالدخول في الفايربيس!';
+    case 'auth/popup-closed-by-user': return 'تم إغلاق نافذة تسجيل Google قبل الإكمال';
+    default: return 'حدث خطأ أثناء التسجيل: ' + code;
+  }
+}
+
 window.handleEmailLogin = async function() {
   const email = document.getElementById('auth-email-input').value.trim();
-  const pass = document.getElementById('auth-pass-input').value;
-  if (!email || !pass) return window.showToast("أدخل البيانات كاملة", "⚠️", "error");
-  
+  const pass = document.getElementById('auth-pass-input').value.trim();
+
+  if (!email || !pass) return window.showToast("أدخل البريد وكلمة المرور كاملين", "⚠️", "error");
+  if (pass.length < 6) return window.showToast("كلمة المرور يجب أن تكون 6 خانات/أرقام على الأقل", "⚠️", "error");
+
+  window.showToast("جاري الإتصال...", "⏳", "info");
+
   try { 
+      // 1. تجربة تسجيل الدخول لحساب موجود
       const cred = await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass); 
       await window.loadPlayerData(cred.user);
       window.updateUIForAuth();
       window.closeModal('modal-auth'); 
-      window.showToast("تم تسجيل الدخول بنجاح", "✅", "success"); 
+      window.showToast("أهلاً بك! تم تسجيل الدخول بنجاح", "✅", "success"); 
   } catch (e) {
-      try { 
-          const cred = await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass); 
-          await window.loadPlayerData(cred.user);
-          window.updateUIForAuth();
-          window.closeModal('modal-auth'); 
-          window.showToast("تم إنشاء الحساب بنجاح", "✅", "success"); 
-      } catch(err) { 
-          window.showToast("الرقم السري خاطئ أو البريد مستخدم", "❌", "error"); 
+      // 2. إذا لم يكن الحساب موجوداً، يتم إنشاؤه تلقائياً
+      if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+          try { 
+              const cred = await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass); 
+              await window.loadPlayerData(cred.user);
+              window.updateUIForAuth();
+              window.closeModal('modal-auth'); 
+              window.showToast("تم إنشاء حسابك الجديد بنجاح! 🚀", "✅", "success"); 
+          } catch(createErr) {
+              console.error("Create Account Error:", createErr);
+              window.showToast(getFirebaseErrorMessage(createErr.code), "❌", "error"); 
+          }
+      } else {
+          console.error("Login Error:", e);
+          window.showToast(getFirebaseErrorMessage(e.code), "❌", "error"); 
       }
   }
+};
+
+window.handleGoogleLogin = async function() { 
+  try { 
+      window.showToast("جاري الإتصال بـ Google...", "⏳", "info");
+      const provider = new window.GoogleAuthProvider(); 
+      const cred = await window.signInWithPopup(window.firebaseAuth, provider); 
+      await window.loadPlayerData(cred.user);
+      window.updateUIForAuth();
+      window.closeModal('modal-auth'); 
+      window.showToast("تم الدخول بحساب Google بنجاح 🎉", "✅", "success"); 
+  } catch(e) { 
+      console.error("Google Login Error:", e);
+      window.showToast(getFirebaseErrorMessage(e.code), "❌", "error"); 
+  } 
 };
 
 window.handleGoogleLogin = async function() { 
