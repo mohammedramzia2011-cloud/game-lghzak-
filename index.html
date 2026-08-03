@@ -10,114 +10,208 @@
 </head>
 <body>
 
-  <div class="container">
+  <div class="app-container">
     
-    <!-- الهيدر العلوي -->
-    <header class="header">
-      <div class="profile-info">
-        <img id="header-avatar" src="https://via.placeholder.com/50" alt="Avatar" class="avatar-sm">
-        <span id="header-username">لاعب تجريبي</span>
+    <!-- الهيدر العلوي وشريط العملات -->
+    <header class="main-header">
+      <div class="user-info-header">
+        <img id="header-avatar" src="https://via.placeholder.com/50" alt="Avatar" class="avatar-circle-sm">
+        <div>
+          <h4 id="header-username">لاعب</h4>
+          <span id="header-user-title" class="badge-title-sm">مبتدئ</span>
+        </div>
       </div>
-      <div class="wallet">
-        <span>🪙 <strong id="user-coins">0</strong></span>
-        <span>💎 <strong id="user-gems">0</strong></span>
+      <div class="wallet-box">
+        <div class="currency-item">🪙 <strong id="user-coins">0</strong></div>
+        <div class="currency-item">💎 <strong id="user-gems">0</strong></div>
       </div>
     </header>
 
-    <!-- شريط القائمة الرئيسية -->
-    <nav class="navbar">
-      <button class="nav-btn active" onclick="switchTab('worlds')">العوالم</button>
-      <button class="nav-btn" onclick="switchTab('store')">المتجر</button>
-      <button class="nav-btn" onclick="switchTab('profile')">البروفايل</button>
-      <button class="nav-btn admin-btn" onclick="switchTab('admin')">المالك</button>
+    <!-- شريط التحديثات والإعلانات المنشورة من المالك -->
+    <div id="announcement-banner" class="announcement-card hidden">
+      <div class="announcement-header">
+        <span>📢 **تحديث جديد من المالك**</span>
+        <small id="ann-date"></small>
+      </div>
+      <h4 id="ann-title" class="ann-title"></h4>
+      <p id="ann-text" class="ann-body"></p>
+    </div>
+
+    <!-- القائمة الرئيسية للتنقل -->
+    <nav class="navigation-bar">
+      <button class="nav-btn active" onclick="switchMainTab('worlds')">🗺️ العوالم</button>
+      <button class="nav-btn" onclick="switchMainTab('search-players')">🔍 البحث عن لاعبين</button>
+      <button class="nav-btn" onclick="switchMainTab('favorite-players')">⭐ بروفايلات مفضلة</button>
+      <button class="nav-btn" onclick="switchMainTab('store')">🛒 المتجر</button>
+      <button class="nav-btn" onclick="switchMainTab('my-profile')">👤 بروفايلي</button>
+      <button class="nav-btn owner-btn" onclick="switchMainTab('owner-panel')">👑 المالك</button>
     </nav>
 
-    <!-- تسجيل الدخول -->
-    <div id="auth-box" class="card">
-      <div id="logout-state">
-        <button id="google-login-btn" class="btn btn-google">تسجيل الدخول باستخدام Google</button>
+    <!-- تسجيل الدخول عبر Google -->
+    <div id="auth-section" class="card-box">
+      <div id="logged-out-view">
+        <p>قم بتسجيل الدخول لحفظ تقدمك والظهور في البحث بين اللاعبين:</p>
+        <button id="btn-google-auth" class="btn btn-google">تسجيل الدخول باستخدام Google</button>
       </div>
-      <div id="login-state" class="hidden">
-        <span>مرحباً: <b id="user-name-display"></b></span>
-        <button id="logout-btn" class="btn btn-danger-sm">خروج</button>
+      <div id="logged-in-view" class="hidden align-between">
+        <span>أهلاً بك: <b id="display-auth-name"></b></span>
+        <button id="btn-logout" class="btn btn-danger-sm">تسجيل الخروج</button>
       </div>
     </div>
 
-    <!-- قسم العوالم والمراحل -->
-    <section id="tab-worlds" class="tab-content">
-      <h3>🗺️ العوالم والمراحل</h3>
-      <div id="worlds-container"></div>
-    </section>
-
-    <!-- قسم المتجر -->
-    <section id="tab-store" class="tab-content hidden">
-      <h3>🛒 المتجر</h3>
-      <div class="sub-tabs">
-        <button class="sub-btn active" onclick="switchStoreTab('avatars')">الافتارات</button>
-        <button class="sub-btn" onclick="switchStoreTab('frames')">الإطارات</button>
-        <button class="sub-btn" onclick="switchStoreTab('banners')">البنرات</button>
-        <button class="sub-btn" onclick="switchStoreTab('titles')">الألقاب</button>
+    <!-- 1. قسم العوالم والمراحل -->
+    <section id="tab-worlds" class="content-section">
+      <div class="section-title">
+        <h3>🗺️ العوالم والمراحل</h3>
       </div>
-      <div id="store-items-grid" class="grid"></div>
+      <div id="worlds-list-container"></div>
     </section>
 
-    <!-- قسم البروفايل -->
-    <section id="tab-profile" class="tab-content hidden">
-      <h3>👤 بطاقة اللاعب والتجهيز</h3>
+    <!-- 2. قسم البحث عن بروفايلات اللاعبين -->
+    <section id="tab-search-players" class="content-section hidden">
+      <div class="section-title">
+        <h3>🔍 البحث عن بروفايلات الأشخاص واللاعبين</h3>
+      </div>
+      <div class="search-box">
+        <input type="text" id="player-search-input" class="form-input" placeholder="اكتب اسم اللاعب أو لقبه للبحث..." oninput="searchPlayers()">
+      </div>
+      <div id="players-search-results" class="players-cards-grid"></div>
+    </section>
+
+    <!-- 3. قسم البروفايلات المفضلة -->
+    <section id="tab-favorite-players" class="content-section hidden">
+      <div class="section-title">
+        <h3>⭐ بروفايلات الأشخاص المفضلين</h3>
+      </div>
+      <div id="favorite-players-list" class="players-cards-grid"></div>
+    </section>
+
+    <!-- 4. قسم المتجر -->
+    <section id="tab-store" class="content-section hidden">
+      <div class="section-title">
+        <h3>🛒 المتجر والشراء</h3>
+      </div>
+      <div class="sub-navigation">
+        <button class="sub-nav-btn active" onclick="switchStoreTab('avatars')">الافتارات</button>
+        <button class="sub-nav-btn" onclick="switchStoreTab('frames')">الإطارات</button>
+        <button class="sub-nav-btn" onclick="switchStoreTab('banners')">البنرات</button>
+        <button class="sub-nav-btn" onclick="switchStoreTab('titles')">الألقاب</button>
+      </div>
+      <div id="store-catalog-grid" class="catalog-grid"></div>
+    </section>
+
+    <!-- 5. قسم البروفايل الشخصي والتجهيز -->
+    <section id="tab-my-profile" class="content-section hidden">
+      <div class="section-title">
+        <h3>👤 بطاقة البروفايل والتجهيز</h3>
+      </div>
       
-      <div class="profile-card">
-        <div id="card-banner" class="banner-box">
-          <div class="avatar-box">
-            <img id="card-avatar" src="" alt="Avatar">
-            <div id="card-frame" class="frame-box"></div>
+      <!-- معاينة بطاقة البروفايل -->
+      <div id="my-profile-card-preview" class="player-profile-card">
+        <div id="my-card-banner" class="card-banner-bg">
+          <div class="avatar-frame-wrapper">
+            <img id="my-card-avatar" src="" alt="Avatar" class="card-avatar-img">
+            <div id="my-card-frame" class="card-frame-overlay"></div>
           </div>
         </div>
-        <div class="profile-details">
-          <h4 id="card-username">لاعب</h4>
-          <span id="card-title" class="title-badge">بدون لقب</span>
+        <div class="card-info-body">
+          <h3 id="my-card-username">لاعب</h3>
+          <span id="my-card-title" class="badge-title">بدون لقب</span>
+          <div class="profile-stats-row">
+            <div>المراحل المكتملة: <strong id="my-stats-stages">0</strong></div>
+            <div>المفضلون: <strong id="my-stats-favs">0</strong></div>
+          </div>
         </div>
       </div>
 
-      <h4 style="margin-top: 20px;">المقتنيات المملوكة</h4>
-      <div class="sub-tabs">
-        <button class="sub-btn active" onclick="switchInvTab('avatars')">افتاراتي</button>
-        <button class="sub-btn" onclick="switchInvTab('frames')">إطاراتي</button>
-        <button class="sub-btn" onclick="switchInvTab('banners')">بنراتي</button>
-        <button class="sub-btn" onclick="switchInvTab('titles')">ألقابي</button>
+      <h4 style="margin-top: 20px; margin-bottom: 10px;">المقتنيات الخاصة بي</h4>
+      <div class="sub-navigation">
+        <button class="sub-nav-btn active" onclick="switchInventoryTab('avatars')">افتاراتي</button>
+        <button class="sub-nav-btn" onclick="switchInventoryTab('frames')">إطاراتي</button>
+        <button class="sub-nav-btn" onclick="switchInventoryTab('banners')">بنراتي</button>
+        <button class="sub-nav-btn" onclick="switchInventoryTab('titles')">ألقابي</button>
       </div>
-      <div id="inventory-items-grid" class="grid"></div>
+      <div id="my-inventory-grid" class="catalog-grid"></div>
     </section>
 
-    <!-- قسم الآدمين (المالك) -->
-    <section id="tab-admin" class="tab-content hidden">
-      <h3>👑 لوحة التحكم والمالك</h3>
-
-      <!-- إضافة عالم -->
-      <div class="card">
-        <h4>إضافة عالم جديد</h4>
-        <input type="text" id="new-world-title" placeholder="اسم العالم..." class="input-field">
-        <button class="btn btn-primary" onclick="addNewWorld()">إضافة العالم</button>
+    <!-- 6. قسم لوحة المالك والتحكم الشامل -->
+    <section id="tab-owner-panel" class="content-section hidden">
+      <div class="section-title">
+        <h3>👑 لوحة المالك والتحكم الشامل باللعبة</h3>
       </div>
 
-      <!-- إضافة مرحلة -->
-      <div class="card">
-        <h4>إضافة مرحلة</h4>
-        <select id="select-world-target" class="input-field"></select>
-        <input type="text" id="new-stage-title" placeholder="اسم المرحلة..." class="input-field">
-        
-        <div class="row">
-          <input type="number" id="reward-coins" placeholder="العملات" value="100" class="input-field">
-          <input type="number" id="reward-gems" placeholder="الجواهر" value="5" class="input-field">
+      <!-- تعديل بيانات اللاعب والعملات -->
+      <div class="card-box owner-box">
+        <h4>💰 التحكم بحساب اللاعب الحالي والعملات</h4>
+        <div class="form-group">
+          <label>اسم اللاعب:</label>
+          <input type="text" id="owner-input-username" class="form-input">
         </div>
-        <input type="text" id="reward-title" placeholder="لقب الجائزة (اختياري)" class="input-field">
-        <button class="btn btn-primary" onclick="addNewStage()">إضافة المرحلة</button>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>الكوينز (🪙):</label>
+            <input type="number" id="owner-input-coins" class="form-input">
+          </div>
+          <div class="form-group flex-1">
+            <label>الجواهر (💎):</label>
+            <input type="number" id="owner-input-gems" class="form-input">
+          </div>
+        </div>
+        <button class="btn btn-success" onclick="ownerSaveUserData()">حفظ التغييرات الفورية للحساب</button>
       </div>
 
-      <!-- إدارة الحذف -->
-      <div class="card">
-        <h4>إدارة وحذف العوالم والمراحل</h4>
-        <div id="admin-manage-list"></div>
+      <!-- نشر التحديثات والإعلانات -->
+      <div class="card-box owner-box">
+        <h4>📢 نشر تحديث جديد للعبة</h4>
+        <div class="form-group">
+          <label>عنوان التحديث (مثال: إصدار v2.0 التحديث الكبير):</label>
+          <input type="text" id="owner-update-title" class="form-input" placeholder="أدخل العنوان...">
+        </div>
+        <div class="form-group">
+          <label>تفاصيل التحديث وميزات الإضافة:</label>
+          <textarea id="owner-update-text" class="form-input" rows="3" placeholder="أكتب تفاصيل التحديث هنا..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="ownerPublishAnnouncement()">نشر التحديث الآن</button>
+        
+        <h5 style="margin-top:15px;">التحديثات المنشورة سابقاً:</h5>
+        <div id="owner-announcements-list"></div>
       </div>
+
+      <!-- إضافة عالم جديد -->
+      <div class="card-box owner-box">
+        <h4>🗺️ إضافة عالم جديد</h4>
+        <div class="form-group">
+          <input type="text" id="owner-new-world-name" class="form-input" placeholder="اسم العالم الجديد...">
+        </div>
+        <button class="btn btn-primary" onclick="ownerAddWorld()">إضافة العالم</button>
+      </div>
+
+      <!-- إضافة مرحلة جديدة -->
+      <div class="card-box owner-box">
+        <h4>🧩 إضافة مرحلة جديدة للعالم</h4>
+        <div class="form-group">
+          <label>اختر العالم:</label>
+          <select id="owner-select-world" class="form-input"></select>
+        </div>
+        <div class="form-group">
+          <input type="text" id="owner-new-stage-name" class="form-input" placeholder="اسم المرحلة...">
+        </div>
+        <div class="form-row">
+          <input type="number" id="owner-stage-coins" class="form-input" placeholder="الكوينز" value="100">
+          <input type="number" id="owner-stage-gems" class="form-input" placeholder="الجواهر" value="5">
+        </div>
+        <div class="form-group" style="margin-top: 8px;">
+          <input type="text" id="owner-stage-title-reward" class="form-input" placeholder="لقب هدية عند الفوز (اختياري)">
+        </div>
+        <button class="btn btn-primary" onclick="ownerAddStage()">إضافة المرحلة</button>
+      </div>
+
+      <!-- إدارة وحذف العوالم والمراحل -->
+      <div class="card-box owner-box">
+        <h4>⚙️ إدارة وحذف العوالم والمراحل</h4>
+        <div id="owner-manage-worlds-list"></div>
+      </div>
+
     </section>
 
   </div>
