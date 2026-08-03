@@ -1,22 +1,20 @@
 // ==========================================
-// 📌 1. الإعدادات والمتغيرات العامة (Global State)
+// 📌 1. الإعدادات والمتغيرات العامة
 // ==========================================
 const OWNER_EMAIL = "mohammedabudayya2011@gmail.com";
-window.DB_PATH = window.DB_PATH || ""; // المسار المخصص إن وجد في Firebase
+window.DB_PATH = window.DB_PATH || "";
 
 let screenHistory = ['home'];
 let allUsers = [];
 let dbWorlds = [];
 let dbLevels = [];
 let dbShopItems = [];
-let dbCodes = [];
 let dbCrates = [];
 
 window.appSettings = {}; 
 window.isUserBannedLocally = false;
 window.listenersActive = false;
 
-// هيكل بيانات اللاعب الافتراضي
 const defaultPlayer = {
   uid: '', 
   email: '', 
@@ -46,38 +44,27 @@ let currentSlots = [];
 let availableLetters = [];
 
 // ==========================================
-// 🛠️ 2. الدوال المساعدة (Helper Functions)
+// 🛠️ 2. الدوال المساعدة وتصديرها لنطاق window
 // ==========================================
-function isOwner() { 
-  return player.email === OWNER_EMAIL; 
-}
+window.isOwner = function() { return player.email === OWNER_EMAIL; };
+window.getDisplayGems = function() { return window.isOwner() ? "∞" : player.gems; };
+window.getDisplayShards = function() { return window.isOwner() ? "∞" : player.shards; };
+window.calcAccLevel = function(puzzleStage) { return Math.floor((puzzleStage - 1) / 10) + 1; };
 
-function getDisplayGems() { 
-  return isOwner() ? "∞" : player.gems; 
-}
-
-function getDisplayShards() { 
-  return isOwner() ? "∞" : player.shards; 
-}
-
-function calcAccLevel(puzzleStage) { 
-  return Math.floor((puzzleStage - 1) / 10) + 1; 
-}
-
-function openModal(id) { 
+window.openModal = function(id) { 
   const el = document.getElementById(id); 
   if (el) el.classList.remove('hidden'); 
-}
+};
 
-function closeModal(id) { 
+window.closeModal = function(id) { 
   const el = document.getElementById(id); 
   if (el) el.classList.add('hidden'); 
-}
+};
 
-function openAuthModal() { openModal('modal-auth'); }
-function openRedeemModal() { openModal('modal-redeem'); }
+window.openAuthModal = function() { window.openModal('modal-auth'); };
+window.openRedeemModal = function() { window.openModal('modal-redeem'); };
 
-function showToast(msg, icon = '✨', type = 'info') {
+window.showToast = function(msg, icon = '✨', type = 'info') {
   const toast = document.getElementById('toast-msg');
   if (!toast) return;
   
@@ -91,14 +78,11 @@ function showToast(msg, icon = '✨', type = 'info') {
   else toast.classList.add('border-cyan-500');
   
   toast.classList.remove('-translate-y-10', 'opacity-0');
-  setTimeout(() => { 
-    toast.classList.add('-translate-y-10', 'opacity-0'); 
-  }, 3000);
-}
+  setTimeout(() => { toast.classList.add('-translate-y-10', 'opacity-0'); }, 3000);
+};
 
-// مؤشرات الصوت (Web Audio API)
 let audioCtx = null;
-function playSFX(type) {
+window.playSFX = function(type) {
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -125,17 +109,9 @@ function playSFX(type) {
       gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5); 
       osc.start(); 
       osc.stop(audioCtx.currentTime + 0.5); 
-    } else if (type === 'wrong') { 
-      osc.type = 'sawtooth'; 
-      osc.frequency.setValueAtTime(200, audioCtx.currentTime); 
-      osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2); 
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime); 
-      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2); 
-      osc.start(); 
-      osc.stop(audioCtx.currentTime + 0.2); 
     }
   } catch (e) {}
-}
+};
 
 function getUniqueName(baseName) {
   let newName = baseName;
@@ -146,9 +122,9 @@ function getUniqueName(baseName) {
 }
 
 // ==========================================
-// 📱 3. التنقل بين الشاشات (Navigation System)
+// 📱 3. التنقل بين الشاشات
 // ==========================================
-function navigateTo(screenId) {
+window.navigateTo = function(screenId) {
   if (window.isUserBannedLocally) return;
   
   document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
@@ -163,21 +139,20 @@ function navigateTo(screenId) {
   
   if (screenId === 'worlds') renderWorldsGrid();
   if (screenId === 'leaderboard') renderLeaderboard();
-  if (screenId === 'admin') populateAdminDropdowns();
   if (screenId === 'shop') renderShopItems();
   if (screenId === 'crates') renderCrates();
   if (screenId === 'profile') { calculateProfileRank(); updateUI(); window.updateUIForAuth(); }
   if (screenId === 'home') { window.updateUIForAuth(); }
-}
+};
 
-function goBack() {
+window.goBack = function() {
   if (screenHistory.length > 1) { 
     screenHistory.pop(); 
-    navigateTo(screenHistory.pop()); 
+    window.navigateTo(screenHistory.pop()); 
   } else { 
-    navigateTo('home'); 
+    window.navigateTo('home'); 
   }
-}
+};
 
 function updateNavStyles(activeScreen) {
   document.querySelectorAll('#bottom-nav button').forEach(btn => { 
@@ -203,7 +178,7 @@ function updateNavStyles(activeScreen) {
 }
 
 // ==========================================
-// 🔄 4. مزامنة بيانات اللاعب و Firebase
+// 🔄 4. مزامنة البيانات و Firebase
 // ==========================================
 window.resetPlayerData = () => { 
   player = JSON.parse(JSON.stringify(defaultPlayer)); 
@@ -219,13 +194,12 @@ window.loadPlayerData = async (user) => {
        const data = snap.data();
        if (data.isBanned) { 
          window.isUserBannedLocally = true; 
-         openModal('modal-banned'); 
+         window.openModal('modal-banned'); 
          return; 
        }
-       
        player = { ...defaultPlayer, ...data, uid: user.uid, email: user.email || '' };
        player.xp = data.xp || 0;
-       player.accLevel = calcAccLevel(player.currentLevel);
+       player.accLevel = window.calcAccLevel(player.currentLevel);
     } else {
        let newName = getUniqueName('لاعب');
        player = { ...defaultPlayer, uid: user.uid, email: user.email || '', name: newName, accLevel: 1 };
@@ -245,7 +219,6 @@ window.setupRealtimeListeners = () => {
   if (window.listenersActive) return;
   window.listenersActive = true;
 
-  // الإعدادات العامة
   window.onSnapshot(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), (docSnap) => {
      if (docSnap.exists()){ 
        window.appSettings = docSnap.data(); 
@@ -253,7 +226,6 @@ window.setupRealtimeListeners = () => {
      }
   });
 
-  // العوالم
   window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'worlds'), (snap) => {
     dbWorlds = snap.docs.map(d => d.data()).sort((a,b) => a.start - b.start);
     const hwCount = document.getElementById('home-worlds-count');
@@ -261,15 +233,12 @@ window.setupRealtimeListeners = () => {
     if (hwCount) hwCount.innerText = `${dbWorlds.length} عوالم ساحرة`;
     if (wtBadge) wtBadge.innerText = `${dbWorlds.length} عالم`;
     if (screenHistory[screenHistory.length-1] === 'worlds') renderWorldsGrid();
-    populateAdminDropdowns();
   });
 
-  // المراحل
   window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'levels'), (snap) => {
     dbLevels = snap.docs.map(d => d.data()).sort((a,b) => a.num - b.num);
   });
 
-  // المتجر والصناديق
   window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'shop'), (snap) => {
     dbShopItems = snap.docs.map(d => d.data());
     if (screenHistory[screenHistory.length-1] === 'shop') renderShopItems();
@@ -280,7 +249,6 @@ window.setupRealtimeListeners = () => {
     if (screenHistory[screenHistory.length-1] === 'crates') renderCrates();
   });
 
-  // ⚡ استعلام سريع ومحدد للوحة المتصدرين (أعلى 50 لاعب لمنع البطء)
   const topUsersQuery = window.query(
       window.collection(window.firebaseDb, window.DB_PATH + 'users'), 
       window.orderBy('currentLevel', 'desc'), 
@@ -293,14 +261,13 @@ window.setupRealtimeListeners = () => {
     if (screenHistory[screenHistory.length-1] === 'profile') calculateProfileRank();
   });
 
-  // مزامنة بيانت المستخدم الحالية
   if (player.uid) {
      window.onSnapshot(window.doc(window.firebaseDb, window.DB_PATH + 'users', player.uid), (docSnap) => {
         if (docSnap.exists()){
            const data = docSnap.data(); 
            if (data.isBanned) { 
              window.isUserBannedLocally = true; 
-             openModal('modal-banned'); 
+             window.openModal('modal-banned'); 
              return; 
            }
            player.shards = data.shards; 
@@ -308,17 +275,11 @@ window.setupRealtimeListeners = () => {
            player.xp = data.xp || 0;
            player.currentLevel = data.currentLevel; 
            player.name = data.name; 
-           player.accLevel = calcAccLevel(player.currentLevel);
+           player.accLevel = window.calcAccLevel(player.currentLevel);
            player.titles = data.titles || ['مستكشف الألغاز']; 
            player.equippedTitle = data.equippedTitle || 'مستكشف الألغاز';
            player.avatars = data.avatars || ['https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak']; 
            player.equippedAvatar = data.equippedAvatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak';
-           player.frames = data.frames || ['بدون إطار']; 
-           player.equippedFrame = data.equippedFrame || 'بدون إطار';
-           player.banners = data.banners || ['بدون بنر']; 
-           player.equippedBanner = data.equippedBanner || 'بدون بنر';
-           player.badges = data.badges || []; 
-           player.lastDaily = data.lastDaily || '';
            updateUI(); 
            window.updateUIForAuth();
         }
@@ -329,9 +290,8 @@ window.setupRealtimeListeners = () => {
 function applyGlobalSettings() {
     if (!window.appSettings) return;
     const container = document.getElementById('app-container');
-    if (container) {
-        if (window.appSettings.bgUrl) container.style.backgroundImage = `url('${window.appSettings.bgUrl}')`; 
-        else container.style.backgroundImage = 'none';
+    if (container && window.appSettings.bgUrl) {
+        container.style.backgroundImage = `url('${window.appSettings.bgUrl}')`; 
     }
 }
 
@@ -350,7 +310,6 @@ window.updateUIForAuth = () => {
       if (loggedSec) loggedSec.classList.remove('hidden');
       if (emailText) emailText.innerText = currentUser.email || player.name || 'حساب مسجل';
       if (homeLoginBanner) homeLoginBanner.classList.add('hidden');
-      
       if (currentUser.email === OWNER_EMAIL) {
           if (adminBtn) adminBtn.classList.remove('hidden');
       } else {
@@ -366,12 +325,12 @@ window.updateUIForAuth = () => {
 };
 
 function updateUI() {
-  player.accLevel = calcAccLevel(player.currentLevel); 
+  player.accLevel = window.calcAccLevel(player.currentLevel); 
   
   const curShards = document.getElementById('currency-shards');
   const curGems = document.getElementById('currency-gems');
-  if (curShards) curShards.innerText = getDisplayShards(); 
-  if (curGems) curGems.innerText = getDisplayGems();
+  if (curShards) curShards.innerText = window.getDisplayShards(); 
+  if (curGems) curGems.innerText = window.getDisplayGems();
   
   const hName = document.getElementById('header-name');
   const hTitle = document.getElementById('header-title');
@@ -395,71 +354,62 @@ async function savePlayer() {
     await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', player.uid), { 
       name: player.name, 
       currentLevel: player.currentLevel, 
-      shards: isOwner() ? 0 : player.shards, 
-      gems: isOwner() ? 0 : player.gems, 
+      shards: window.isOwner() ? 0 : player.shards, 
+      gems: window.isOwner() ? 0 : player.gems, 
       xp: player.xp || 0,
       equippedTitle: player.equippedTitle, 
-      titles: player.titles, 
-      avatars: player.avatars, 
-      equippedAvatar: player.equippedAvatar, 
-      frames: player.frames, 
-      equippedFrame: player.equippedFrame, 
-      banners: player.banners, 
-      equippedBanner: player.equippedBanner, 
-      badges: player.badges, 
-      lastDaily: player.lastDaily, 
-      isBanned: player.isBanned
+      equippedAvatar: player.equippedAvatar
     }); 
   } catch(e) {}
 }
 
 // ==========================================
-// 🔑 5. تسجيل الدخول واختبار الحسابات
+// 🔑 5. الحسابات وتسجيل الدخول
 // ==========================================
-async function handleEmailLogin() {
+window.handleEmailLogin = async function() {
   const email = document.getElementById('auth-email-input').value.trim();
   const pass = document.getElementById('auth-pass-input').value;
-  if (!email || !pass) return showToast("أدخل البيانات كاملة", "⚠️", "error");
+  if (!email || !pass) return window.showToast("أدخل البيانات كاملة", "⚠️", "error");
   
   try { 
       const cred = await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass); 
       await window.loadPlayerData(cred.user);
       window.updateUIForAuth();
-      closeModal('modal-auth'); 
-      showToast("تم تسجيل الدخول بنجاح", "✅", "success"); 
+      window.closeModal('modal-auth'); 
+      window.showToast("تم تسجيل الدخول بنجاح", "✅", "success"); 
   } catch (e) {
       try { 
           const cred = await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass); 
           await window.loadPlayerData(cred.user);
           window.updateUIForAuth();
-          closeModal('modal-auth'); 
-          showToast("تم إنشاء الحساب بنجاح", "✅", "success"); 
+          window.closeModal('modal-auth'); 
+          window.showToast("تم إنشاء الحساب بنجاح", "✅", "success"); 
       } catch(err) { 
-          showToast("الرقم السري خاطئ أو البريد مستخدم", "❌", "error"); 
+          window.showToast("الرقم السري خاطئ أو البريد مستخدم", "❌", "error"); 
       }
   }
-}
+};
 
-async function handleGoogleLogin() { 
+window.handleGoogleLogin = async function() { 
     try { 
         const provider = new window.GoogleAuthProvider(); 
         const cred = await window.signInWithPopup(window.firebaseAuth, provider); 
         await window.loadPlayerData(cred.user);
         window.updateUIForAuth();
-        closeModal('modal-auth'); 
-        showToast("تم الدخول بحساب Google", "✅", "success"); 
-    } catch(e) { showToast("فشل الدخول بحساب Google", "❌", "error"); } 
-}
+        window.closeModal('modal-auth'); 
+        window.showToast("تم الدخول بحساب Google", "✅", "success"); 
+    } catch(e) { window.showToast("فشل الدخول بحساب Google", "❌", "error"); } 
+};
 
 // ==========================================
-// 🎮 6. طريقة اللعب وإدارة اللغز (Game Mechanics)
+// 🎮 6. نظام اللعب
 // ==========================================
-function playCurrentLevel() {
+window.playCurrentLevel = function() {
   const lvl = dbLevels.find(l => l.num == player.currentLevel);
-  if (!lvl) return showToast("أنت أسطورة! أنهيت جميع المراحل المتاحة حالياً.", "🚀", "info");
+  if (!lvl) return window.showToast("أنت أسطورة! أنهيت جميع المراحل المتاحة حالياً.", "🚀", "info");
   loadLevel(lvl); 
-  navigateTo('game');
-}
+  window.navigateTo('game');
+};
 
 function loadLevel(lvl) {
   currentLevelObj = lvl; 
@@ -501,8 +451,8 @@ function renderGameUI() {
   checkWin();
 }
 
-function addLetterToSlot(letterId) { 
-  playSFX('click'); 
+window.addLetterToSlot = function(letterId) { 
+  window.playSFX('click'); 
   const emptyIndex = currentSlots.findIndex(s => s === null); 
   if (emptyIndex !== -1) { 
     const l = availableLetters.find(x => x.id === letterId); 
@@ -512,52 +462,52 @@ function addLetterToSlot(letterId) {
       renderGameUI(); 
     } 
   } 
-}
+};
 
-function removeLetterFromSlot(slotIndex) { 
+window.removeLetterFromSlot = function(slotIndex) { 
   const slot = currentSlots[slotIndex]; 
   if (slot) { 
-    playSFX('click'); 
+    window.playSFX('click'); 
     const l = availableLetters.find(x => x.id === slot.id); 
     if (l) l.used = false; 
     currentSlots[slotIndex] = null; 
     renderGameUI(); 
   } 
-}
+};
 
 function checkWin() {
   const currentWord = currentSlots.map(s => s ? s.char : '').join('');
   if (currentWord === currentLevelObj.a) {
-    playSFX('win'); 
+    window.playSFX('win'); 
     confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
     
     const winShards = currentLevelObj.shards || window.appSettings.defaultRewardShards || 5;
     const winXP = currentLevelObj.xp || window.appSettings.defaultRewardXp || 20;
 
     document.getElementById('win-reward-text').innerText = `حصلت على +${winShards} شظية 🧩 و +${winXP} XP ✨`;
-    setTimeout(() => { openModal('modal-win'); }, 400);
+    setTimeout(() => { window.openModal('modal-win'); }, 400);
   }
 }
 
-async function nextLevelFromWinModal() {
-  closeModal('modal-win');
+window.nextLevelFromWinModal = async function() {
+  window.closeModal('modal-win');
   if (player.currentLevel === currentLevelObj.num) {
      const winShards = currentLevelObj.shards || window.appSettings.defaultRewardShards || 5;
      const winXP = currentLevelObj.xp || window.appSettings.defaultRewardXp || 20;
 
-     if (!isOwner()) {
+     if (!window.isOwner()) {
         player.shards += winShards;
         player.xp = (player.xp || 0) + winXP;
      }
      player.currentLevel += 1; 
-     player.accLevel = calcAccLevel(player.currentLevel); 
+     player.accLevel = window.calcAccLevel(player.currentLevel); 
      await savePlayer();
   }
-  playCurrentLevel();
-}
+  window.playCurrentLevel();
+};
 
 // ==========================================
-// 🗺️ 7. عرض العوالم والمتصدرين والمتجر
+// 🌍 7. العوالم والمتصدرين والمتجر
 // ==========================================
 function renderWorldsGrid() {
   const container = document.getElementById('worlds-grid-container');
@@ -596,11 +546,6 @@ function renderLeaderboard() {
   if (!container) return;
   container.innerHTML = '';
 
-  if (allUsers.length === 0) {
-    container.innerHTML = `<div class="text-center text-xs text-gray-400 py-8">جاري تحميل الأبطال...</div>`;
-    return;
-  }
-
   allUsers.forEach((u, idx) => {
     const rank = idx + 1;
     let badge = `#${rank}`;
@@ -634,9 +579,7 @@ function renderShopItems() {
       <div class="glass-card p-4 rounded-2xl text-center space-y-2 border border-white/10">
         <span class="text-3xl">${item.icon || '🎁'}</span>
         <h4 class="text-xs font-bold">${item.name}</h4>
-        <button class="w-full bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black py-1.5 rounded-xl text-xs">
-          ${item.price} 🧩
-        </button>
+        <button class="w-full bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black py-1.5 rounded-xl text-xs">${item.price} 🧩</button>
       </div>
     `;
   });
@@ -646,47 +589,27 @@ function renderCrates() {
   const container = document.getElementById('crates-grid');
   if (!container) return;
   container.innerHTML = dbCrates.length ? '' : `<div class="text-center text-xs text-gray-400 py-8">لا توجد صناديق متاحة حالياً.</div>`;
-  
-  dbCrates.forEach(crate => {
-    container.innerHTML += `
-      <div class="glass-card p-4 rounded-2xl flex justify-between items-center border border-amber-500/20">
-        <div class="flex items-center gap-3">
-          <span class="text-3xl">📦</span>
-          <div>
-            <h4 class="text-xs font-bold text-amber-400">${crate.name}</h4>
-            <span class="text-[10px] text-gray-400">${crate.desc || 'صندوق جوائز أسطوري'}</span>
-          </div>
-        </div>
-        <button class="btn-3d-orange px-4 py-2 rounded-xl text-xs font-black">فتح الصندوق</button>
-      </div>
-    `;
-  });
 }
 
 function calculateProfileRank() {
   if (!allUsers.length) return;
   const userIndex = allUsers.findIndex(u => u.uid === player.uid);
   const rankEl = document.getElementById('profile-stat-rank');
-  if (rankEl) {
-    rankEl.innerText = userIndex !== -1 ? `#${userIndex + 1}` : '#--';
-  }
+  if (rankEl) rankEl.innerText = userIndex !== -1 ? `#${userIndex + 1}` : '#--';
 }
 
-async function handleRedeemCode() {
+window.handleRedeemCode = async function() {
   const input = document.getElementById('redeem-code-input');
-  if (!input || !input.value.trim()) return showToast("أدخل الكود أولاً", "⚠️", "error");
-  
-  showToast("جاري فحص الكود...", "⏳", "info");
-  closeModal('modal-redeem');
+  if (!input || !input.value.trim()) return window.showToast("أدخل الكود أولاً", "⚠️", "error");
+  window.showToast("جاري فحص الكود...", "⏳", "info");
+  window.closeModal('modal-redeem');
   input.value = '';
-}
+};
 
 // ==========================================
-// 👑 8. لوحة تحكم المالك وتوليد 1000 مرحلة
+// 👑 8. إعدادات المالك وتوليد المراحل
 // ==========================================
-function populateAdminDropdowns() {}
-
-async function adminSaveGlobalSettings() {
+window.adminSaveGlobalSettings = async function() {
     const bg = document.getElementById('adm-setting-bg')?.value.trim();
     const splashT = document.getElementById('adm-setting-splash-title')?.value.trim();
     const defaultShards = parseInt(document.getElementById('adm-setting-reward-shards')?.value) || 5;
@@ -699,32 +622,32 @@ async function adminSaveGlobalSettings() {
             defaultRewardShards: defaultShards,
             defaultRewardXp: defaultXp
         }, { merge: true });
-        showToast("تم حفظ الإعدادات بنجاح!", "🚀", "success");
+        window.showToast("تم حفظ الإعدادات بنجاح!", "🚀", "success");
     } catch(e) { 
-        showToast("خطأ أثناء حفظ الإعدادات", "❌", "error"); 
+        window.showToast("خطأ أثناء حفظ الإعدادات", "❌", "error"); 
     }
-}
+};
 
-async function adminGenerateMassiveGame() {
-   if (!confirm("تنبيه: سيتم إنشاء 10 عوالم وبداخلها 1000 مرحلة بتدرج صعوبة محكم. هل أنت موقن؟")) return;
-   showToast("جاري إنشاء العوالم والمراحل...", "⏳", "info");
+window.adminGenerateMassiveGame = async function() {
+   if (!confirm("تنبيه: سيتم إنشاء 10 عوالم و 1000 مرحلة. هل أنت متأكد؟")) return;
+   window.showToast("جاري إنشاء العوالم والمراحل...", "⏳", "info");
    
-   const easyWords = ['قمر','شمس','بحر','نهر','جبل','نجم','سماء','نار','ماء','ثلج','رمل','أسد','نمر','ورد'];
-   const medWords = ['كوكب','محيط','صحراء','غابة','بركان','زلزال','عاصفة','إعصار','سفينة','طائرة','سيارة'];
-   const hardWords = ['جاذبية','ديناميكا','فلسفة','تاريخ','جغرافيا','اقتصاد','خوارزمية','إلكترون','مجرة'];
-   const expertWords = ['أنثروبولوجيا','ميكانيكا','ميتافيزيقيا','سوسيولوجيا','ترانسيلفانيا','استراتيجية'];
+   const easyWords = ['قمر','شمس','بحر','نهر','جبل','نجم','سماء','نار','ماء','ثلج','رمل','أسد','ورد'];
+   const medWords = ['كوكب','محيط','صحراء','غابة','بركان','زلزال','عاصفة','إعصار','سفينة','طائرة'];
+   const hardWords = ['جاذبية','ديناميكا','فلسفة','تاريخ','جغرافيا','اقتصاد','خوارزمية','مجرة'];
+   const expertWords = ['أنثروبولوجيا','ميكانيكا','ميتافيزيقيا','سوسيولوجيا','استراتيجية'];
 
    const worlds = [
-        { id: 'w1', name: 'غابة البداية', icon: '🌲', rewardTitle: 'حارس الغابة' },
-        { id: 'w2', name: 'صحراء الغموض', icon: '🏜️', rewardTitle: 'فارس الصحراء' },
-        { id: 'w3', name: 'جبل الجليد', icon: '🏔️', rewardTitle: 'قاهر الصقيع' },
-        { id: 'w4', name: 'بركان الغضب', icon: '🌋', rewardTitle: 'سيد النار' },
-        { id: 'w5', name: 'أعماق المحيط', icon: '🌊', rewardTitle: 'حاكم البحار' },
-        { id: 'w6', name: 'مدينة السحاب', icon: '☁️', rewardTitle: 'صقر السماء' },
-        { id: 'w7', name: 'بوابة المجرة', icon: '🌌', rewardTitle: 'رائد الفضاء' },
-        { id: 'w8', name: 'عالم النيون', icon: '🏙️', rewardTitle: 'المخترق' },
-        { id: 'w9', name: 'متاهة الزمن', icon: '⏳', rewardTitle: 'حارس الزمن' },
-        { id: 'w10', name: 'قلعة الأساطير', icon: '🏰', rewardTitle: 'الأسطورة الخالدة' }
+        { id: 'w1', name: 'غابة البداية', icon: '🌲' },
+        { id: 'w2', name: 'صحراء الغموض', icon: '🏜️' },
+        { id: 'w3', name: 'جبل الجليد', icon: '🏔️' },
+        { id: 'w4', name: 'بركان الغضب', icon: '🌋' },
+        { id: 'w5', name: 'أعماق المحيط', icon: '🌊' },
+        { id: 'w6', name: 'مدينة السحاب', icon: '☁️' },
+        { id: 'w7', name: 'بوابة المجرة', icon: '🌌' },
+        { id: 'w8', name: 'عالم النيون', icon: '🏙️' },
+        { id: 'w9', name: 'متاهة الزمن', icon: '⏳' },
+        { id: 'w10', name: 'قلعة الأساطير', icon: '🏰' }
    ];
 
    try {
@@ -732,18 +655,17 @@ async function adminGenerateMassiveGame() {
      for (let i = 0; i < worlds.length; i++) { 
          let w = worlds[i]; 
          let start = globalLevel; 
-         let end = globalLevel + 99; // 100 مرحلة لكل عالم
+         let end = globalLevel + 99;
 
          await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', w.id), { 
-            id: w.id, name: w.name, icon: w.icon, start: start, end: end, rewardTitle: w.rewardTitle, finishersCount: 0 
+            id: w.id, name: w.name, icon: w.icon, start: start, end: end 
          });
          
          let batchProms = [];
          for (let lvl = start; lvl <= end; lvl++) {
              let wordPool = lvl <= 200 ? easyWords : (lvl <= 500 ? medWords : (lvl <= 800 ? hardWords : expertWords));
              let answer = wordPool[Math.floor(Math.random() * wordPool.length)];
-             let difficultyText = lvl <= 200 ? 'سهل' : (lvl <= 500 ? 'متوسط' : (lvl <= 800 ? 'صعب' : 'أسطوري'));
-             let question = `المرحلة ${lvl} (${difficultyText}): خمن الكلمة الصحيحة للمرور!`;
+             let question = `المرحلة ${lvl}: خمن الكلمة الصحيحة للمرور!`;
              
              batchProms.push(window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+lvl), { 
                  num: lvl, world: w.id, q: question, a: answer, shards: 5, xp: 20 
@@ -757,21 +679,18 @@ async function adminGenerateMassiveGame() {
          if (batchProms.length > 0) await Promise.all(batchProms);
          globalLevel = end + 1;
      }
-     showToast("تم إنشاء 10 عوالم و 1000 مرحلة بنجاح!", "🔥", "success");
+     window.showToast("تم إنشاء 10 عوالم و 1000 مرحلة بنجاح!", "🔥", "success");
    } catch(e) { 
-     console.error(e); 
-     showToast("حدث خطأ أثناء التوليد", "❌", "error"); 
+     window.showToast("حدث خطأ أثناء التوليد", "❌", "error"); 
    }
-}
+};
 
 // ==========================================
-// 🚀 9. تشغيل التطبيق (App Initialization)
+// 🚀 9. التشغيل التلقائي
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  // تهيئة الواجهة
-  navigateTo('splash');
+  window.navigateTo('splash');
   
-  // تفعيل الاستماع الأحداث من Firebase فور اكتمال تحميل الصفحة
   const checkInterval = setInterval(() => {
     if (window.firebaseAuth && window.firebaseDb) {
       clearInterval(checkInterval);
