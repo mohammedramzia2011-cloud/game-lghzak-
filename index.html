@@ -162,6 +162,10 @@
         </div>
         <div id="game-question-card" class="glass-card p-5 rounded-3xl border border-brand-500/30 text-center my-2 relative overflow-hidden flex flex-col items-center justify-center min-h-[140px]">
           <span id="game-world-bg-icon" class="absolute -bottom-6 -right-6 text-7xl opacity-10">🧩</span>
+          
+          <!-- إضافة الصورة هنا[cite: 4] -->
+          <img id="game-question-img" src="" class="hidden w-28 h-28 rounded-xl object-cover mb-3 border border-brand-500/50 z-10 relative shadow-lg" />[cite: 4]
+          
           <h3 id="game-question-text" class="text-base font-black text-white font-messiri leading-relaxed">جاري التحميل...</h3>
         </div>
         <div class="glass-card p-3 rounded-2xl border border-amber-500/30 my-1">
@@ -198,6 +202,12 @@
       <section id="screen-leaderboard" class="hidden p-4 space-y-4 pb-20">
         <div class="flex items-center gap-2"><button onclick="goBack()" class="bg-black/50 border border-white/10 text-gray-300 hover:text-white px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5"><i class="fa-solid fa-arrow-right"></i> رجوع</button><h2 class="text-xl font-black text-white font-messiri">🏆 الصدارة</h2></div>
         
+        <!-- إضافة تبويب الجميع والمفضلة أسفل شريط البحث مباشرة[cite: 4] -->
+        <div class="flex items-center gap-2 mt-3 mb-2">
+            <button id="btn-lb-all" onclick="switchLeaderboardTab('all')" class="bg-brand-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition">الجميع</button>
+            <button id="btn-lb-favs" onclick="switchLeaderboardTab('favs')" class="bg-black/50 text-gray-400 px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition">المفضلة</button>
+        </div>[cite: 4]
+
         <div class="relative">
           <input type="text" id="global-search-input" onkeyup="searchPlayersGlobal()" placeholder="ابحث عن لاعب باسمه..." class="w-full bg-black/60 border border-brand-500/30 rounded-2xl py-2.5 px-4 text-xs text-white outline-none focus:border-brand-500 transition shadow-inner" />
           <i class="fa-solid fa-search absolute left-4 top-3 text-gray-500 text-xs"></i>
@@ -265,6 +275,11 @@
           <div id="pub-frame-wrap" class="relative mb-3 rounded-full"><img id="pub-avatar-img" src="" class="w-24 h-24 rounded-full border-2 border-cyan-500 bg-game-darkBg object-cover relative z-10" /><span id="pub-owner-badge" class="hidden absolute -bottom-2 -right-2 text-xl drop-shadow-md z-20">👑</span></div>
           <h3 id="pub-name-text" class="text-xl font-black text-white font-messiri">الاسم</h3>
           <span id="pub-title-badge" class="text-xs bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 px-3 py-0.5 rounded-full font-black mt-2">لقب</span>
+          
+          <!-- إضافة زر الإعجاب في الملف الشخصي للاعب[cite: 4] -->
+          <button id="pub-fav-btn" onclick="toggleFavoriteUser()" class="w-full mt-2 bg-black/50 text-gray-300 border border-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:text-white transition flex justify-center gap-2 items-center">
+            <i class="fa-regular fa-heart"></i> مفضلة
+          </button>[cite: 4]
         </div>
         <div class="grid grid-cols-2 gap-2 text-center">
           <div class="glass-card p-4 rounded-2xl border border-white/10"><span class="text-3xl mb-1 block">🏆</span><span class="text-[10px] text-gray-400 font-bold block">المرحلة</span><span id="pub-stat-level" class="text-xl font-black text-brand-400">1</span></div>
@@ -323,6 +338,10 @@
             <h3 class="text-xs font-black text-amber-300">إضافة/تعديل مرحلة يدوية</h3>
             <div class="grid grid-cols-2 gap-2"><input type="number" id="adm-lvl-num" placeholder="رقم المرحلة" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" /><select id="adm-lvl-world" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white"></select></div>
             <input type="text" id="adm-lvl-question" placeholder="السؤال" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            
+            <!-- إضافة حقل رابط الصورة في إضافة المراحل[cite: 4] -->
+            <input type="text" id="adm-lvl-img" placeholder="رابط صورة مساعدة للسؤال (اختياري)" class="w-full bg-black/60 border border-brand-500/30 rounded-xl py-2 px-3 text-xs text-white outline-none mb-2" />[cite: 4]
+
             <div class="grid grid-cols-2 gap-2"><input type="text" id="adm-lvl-answer" placeholder="الإجابة" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" /><input type="number" id="adm-lvl-shards" placeholder="الجائزة 🧩" value="20" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-brand-300" /></div>
             <button onclick="adminSaveLevel()" class="w-full btn-3d-orange py-2 rounded-xl text-xs font-black">حفظ المرحلة ➕</button>
           </div>
@@ -373,8 +392,19 @@
           </div>
         </div>
 
-        <!-- Gift & Codes Tab (تمت إعادتها بنجاح) -->
+        <!-- Gift & Codes Tab -->
         <div id="admin-sec-gift" class="hidden space-y-3">
+          
+          <!-- واجهة الهدايا الجماعية في لوحة الإدارة[cite: 4] -->
+          <div class="bg-black/40 border border-white/10 p-3 rounded-xl mt-4 space-y-2">
+              <h4 class="text-xs font-black text-amber-400 mb-1">🎁 إرسال هدية لجميع اللاعبين</h4>
+              <div class="flex gap-2">
+                  <input type="number" id="adm-mass-shards" placeholder="عدد الشظايا 🧩" class="flex-1 bg-black/60 border border-white/10 rounded-lg px-2 py-2 text-xs text-white" />
+                  <input type="number" id="adm-mass-gems" placeholder="عدد الجواهر 💎" class="flex-1 bg-black/60 border border-white/10 rounded-lg px-2 py-2 text-xs text-white" />
+              </div>
+              <button onclick="adminSendMassGift()" class="w-full bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 px-3 py-2 rounded-lg text-xs font-bold transition">إرسال للجميع الآن</button>
+          </div>[cite: 4]
+
           <div class="glass-card p-4 rounded-2xl border border-white/10 space-y-3">
             <h3 class="text-xs font-black text-yellow-300">إنشاء كود هدايا جديد</h3>
             <input type="text" id="adm-code-name" placeholder="الرمز (مثال: FREE100)" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white uppercase" />
@@ -423,6 +453,11 @@
         
         <button onclick="handleGoogleLogin()" class="w-full bg-white hover:bg-gray-200 text-gray-900 font-black py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg mt-4"><i class="fa-brands fa-google text-red-500 text-base"></i> الدخول باستخدام Google</button>
         
+        <!-- زر تسجيل الدخول بواسطة الفيسبوك[cite: 4] -->
+        <button onclick="handleFacebookLogin()" class="w-full bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition">
+           <i class="fa-brands fa-facebook"></i> الدخول بحساب فيسبوك
+        </button>[cite: 4]
+
         <div class="relative flex items-center justify-center my-4"><span class="bg-gray-900 text-[10px] text-gray-400 px-3 rounded-full z-10 border border-white/10">أو بالبريد الإلكتروني</span><div class="absolute w-full h-px bg-white/10"></div></div>
         
         <input type="email" id="auth-email-input" placeholder="البريد الإلكتروني" class="w-full bg-black/80 border border-white/20 rounded-xl p-3 text-xs text-white outline-none focus:border-brand-500 transition" />
@@ -491,6 +526,16 @@
       <button onclick="navigateTo('profile')" id="nav-profile" class="flex flex-col items-center gap-0.5 text-gray-400 hover:text-white text-[11px]"><i class="fa-solid fa-user text-base"></i><span>حسابي</span></button>
     </nav>
   </div>
+
+  <!-- واجهة شريط التقدم المرئي (يُضاف في آخر الـ Body)[cite: 4] -->
+  <div id="massive-gen-progress-container" class="hidden fixed inset-0 bg-black/80 z-[200] flex flex-col items-center justify-center p-6 backdrop-blur-sm">
+      <span class="text-5xl mb-4 animate-bounce">⏳</span>
+      <h3 class="text-lg font-black text-amber-400 mb-4 font-messiri">جاري التوليد الشامل للعوالم...</h3>
+      <div class="w-full max-w-xs bg-black/60 h-4 rounded-full overflow-hidden border border-white/10 shadow-inner p-0.5">
+          <div id="massive-gen-progress-bar" class="bg-gradient-to-r from-brand-500 to-yellow-400 h-full w-0 rounded-full transition-all duration-300 shadow-glow-orange"></div>
+      </div>
+      <span id="massive-gen-progress-text" class="text-xs text-gray-300 font-bold mt-3">يرجى الانتظار، لا تغلق الصفحة...</span>
+  </div>[cite: 4]
 
   <script src="app.js"></script>
 
