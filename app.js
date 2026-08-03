@@ -1,2 +1,996 @@
-const OWNER_EMAIL = "mohammedabudayya2011@gmail.com";let screenHistory = ['home'], allUsers = [], dbWorlds = [], dbLevels = [], dbShopItems = [], dbCodes = [], dbCrates = [];window.appSettings = {}; window.isUserBannedLocally = false;window.listenersActive = false;let defaultPlayer = {  uid: '', email: '', name: 'زائر',   currentLevel: 1, accLevel: 1, shards: 0, gems: 0,  titles: ['مستكشف الألغاز'], equippedTitle: 'مستكشف الألغاز',  avatars: ['https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak'], equippedAvatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak',  frames: ['بدون إطار'], equippedFrame: 'بدون إطار',  banners: ['بدون بنر'], equippedBanner: 'بدون بنر',  badges: [], lastDaily: '', isOwner: false, isBanned: false,  favorites: []// بيانات النظام والمستخدم الحالي (المالك)let currentUser = {    name: "مالك اللعبة",    role: "owner", // صلاحية كاملة للمالك    gems: 999999999,    shards: 999999999,    money: "∞",    title: "مطور ومؤسس اللعبة",    xp: 99999,    completedWorlds: 10,    inventory: ["قالب أسطوري", "لقب الملك", "أفاتار ذهبي"],    favorites: []};let player = JSON.parse(JSON.stringify(defaultPlayer));let currentLevelObj = null, currentSlots = [], availableLetters = [];function isOwner() { return player.email === OWNER_EMAIL; }function getDisplayGems() { return isOwner() ? "∞" : player.gems; }function getDisplayShards() { return isOwner() ? "∞" : player.shards; }function calcAccLevel(puzzleStage) { return Math.floor((puzzleStage - 1) / 10) + 1; }const frameClassesMap = { 'بدون إطار': '', 'ذهبي': 'frame-gold', 'ناري': 'frame-fire', 'نيون': 'frame-neon', 'أسطوري': 'frame-mythic' };function getFrameClass(frameName) { return frameClassesMap[frameName] || ''; }function navigateTo(screenId) {  if(window.isUserBannedLocally) return;  document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));  document.getElementById(`screen-${screenId}`).classList.remove('hidden');  if (screenHistory[screenHistory.length - 1] !== screenId && screenId !== 'splash') screenHistory.push(screenId);  updateNavStyles(screenId);    if(screenId === 'worlds') renderWorldsGrid();  if(screenId === 'leaderboard') renderLeaderboard();  if(screenId === 'admin') populateAdminDropdowns();  if(screenId === 'shop') renderShopItems();  if(screenId === 'crates') renderCrates();  if(screenId === 'profile') { calculateProfileRank(); updateUI(); window.updateUIForAuth(); }  if(screenId === 'home') { checkDailyReward(); window.updateUIForAuth(); }}function goBack() {  if (screenHistory.length > 1) { screenHistory.pop(); navigateTo(screenHistory.pop()); } else { navigateTo('home'); }}function updateNavStyles(activeScreen) {  document.querySelectorAll('#bottom-nav button').forEach(btn => { btn.classList.remove('text-brand-500'); btn.classList.add('text-gray-400'); });  const activeBtn = document.getElementById(`nav-${activeScreen}`);  if (activeBtn) { activeBtn.classList.remove('text-gray-400'); activeBtn.classList.add('text-brand-500'); }  if (['splash', 'game', 'admin', 'public-profile'].includes(activeScreen)) { document.getElementById('bottom-nav').classList.add('hidden'); document.getElementById('top-bar').classList.add('hidden'); } else { document.getElementById('bottom-nav').classList.remove('hidden'); document.getElementById('top-bar').classList.remove('hidden'); }}function openModal(id) { document.getElementById(id).classList.remove('hidden'); }function closeModal(id) { document.getElementById(id).classList.add('hidden'); }function openAuthModal() { openModal('modal-auth'); }function openRedeemModal() { openModal('modal-redeem'); }function showToast(msg, icon = '✨', type = 'info') {  const toast = document.getElementById('toast-msg');  document.getElementById('toast-text').innerText = msg; document.getElementById('toast-icon').innerText = icon;  toast.className = 'bg-gray-900/95 text-white border px-4 py-2.5 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2 transform transition-all duration-300 pointer-events-auto z-[100]';  if(type === 'error') toast.classList.add('border-red-500'); else if(type === 'success') toast.classList.add('border-green-500'); else toast.classList.add('border-brand-500');  toast.classList.remove('-translate-y-10', 'opacity-0');  setTimeout(() => { toast.classList.add('-translate-y-10', 'opacity-0'); }, 3000);}let audioCtx = null;function playSFX(type) {  try {    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();    if (audioCtx.state === 'suspended') audioCtx.resume();    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();    osc.connect(gain); gain.connect(audioCtx.destination);        if (type === 'click') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.05); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); osc.start(); osc.stop(audioCtx.currentTime + 0.1); }     else if (type === 'win') { osc.type = 'triangle'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }    else if (type === 'wrong') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2); osc.start(); osc.stop(audioCtx.currentTime + 0.2); }    else if (type === 'crate_open') { osc.type = 'square'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.setValueAtTime(500, audioCtx.currentTime + 0.3); osc.frequency.setValueAtTime(900, audioCtx.currentTime + 0.7); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.2); osc.start(); osc.stop(audioCtx.currentTime + 1.2); }  } catch (e) {}}function getUniqueName(baseName) {    let newName = baseName;    while(allUsers.some(u => u.name === newName)) { newName = baseName + '_' + Math.floor(Math.random()*9999); }    return newName;}window.resetPlayerData = () => { player = JSON.parse(JSON.stringify(defaultPlayer)); updateUI(); };window.loadPlayerData = async (user) => {  try {    const userRef = window.doc(window.firebaseDb, window.DB_PATH + 'users', user.uid);    const snap = await window.getDoc(userRef);    if (snap.exists()) {        const data = snap.data();       if(data.isBanned) { window.isUserBannedLocally = true; openModal('modal-banned'); return; }              player = { ...defaultPlayer, ...data, uid: user.uid, email: user.email || '' };       if(!player.avatars) player.avatars = ['https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak'];       if(!player.equippedAvatar) player.equippedAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak';       if(!player.frames) player.frames = ['بدون إطار'];       if(!player.equippedFrame) player.equippedFrame = 'بدون إطار';       if(!player.banners) player.banners = ['بدون بنر'];       if(!player.equippedBanner) player.equippedBanner = 'بدون بنر';       if(!player.badges) player.badges = [];       if(!player.favorites) player.favorites = [];       player.accLevel = calcAccLevel(player.currentLevel);    } else {       let newName = getUniqueName('لاعب');       player = { ...defaultPlayer, uid: user.uid, email: user.email || '', name: newName, accLevel: 1 };       await window.setDoc(userRef, player);// قاعدة بيانات وهمية قابلة للتعديل بالكامل بواسطة المالكlet gameDatabase = {    stages: {},    storeItems: [        { id: 1, name: "قالب بروفايل ملكي", price: 100 },        { id: 2, name: "أفاتار نيون", price: 250 },        { id: 3, name: "لقب صائد الألغاز", price: 500 }    ],    customCodes: {        "OWNER2026": { type: "title", value: "الملك المطلق" },        "FREEGIFT": { type: "avatar", value: "قالب الماس" }    }  } catch (error) {       player.uid = user.uid; player.email = user.email || '';  }    player.isOwner = (player.email === OWNER_EMAIL);  updateUI();   window.updateUIForAuth();};window.setupRealtimeListeners = () => {  if(window.listenersActive) return;  window.listenersActive = true;  window.onSnapshot(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), (docSnap) => {     if(docSnap.exists()){ window.appSettings = docSnap.data(); applyGlobalSettings(); }  });  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'worlds'), (snap) => {    dbWorlds = snap.docs.map(d => d.data()).sort((a,b)=>a.start - b.start);    document.getElementById('home-worlds-count').innerText = `${dbWorlds.length} عوالم ساحرة`;    document.getElementById('worlds-total-badge').innerText = `${dbWorlds.length} عالم`;    if(screenHistory[screenHistory.length-1] === 'worlds') renderWorldsGrid();    populateAdminDropdowns();  });  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'levels'), (snap) => {    dbLevels = snap.docs.map(d => d.data()).sort((a,b)=>a.num - b.num);  });  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'shop'), (snap) => {    dbShopItems = snap.docs.map(d => d.data());    if(screenHistory[screenHistory.length-1] === 'shop') renderShopItems();  });  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'crates'), (snap) => {    dbCrates = snap.docs.map(d => d.data());    if(screenHistory[screenHistory.length-1] === 'crates') renderCrates();    if(screenHistory[screenHistory.length-1] === 'admin') renderAdminCrates();  });  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'codes'), (snap) => {    dbCodes = snap.docs.map(d => d.data());    if(screenHistory[screenHistory.length-1] === 'admin') renderAdminCodes();  });  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'users'), (snap) => {    allUsers = snap.docs.map(d => d.data());    if(screenHistory[screenHistory.length-1] === 'leaderboard') renderLeaderboard();    if(screenHistory[screenHistory.length-1] === 'profile') calculateProfileRank();  });  if (player.uid) {     window.onSnapshot(window.doc(window.firebaseDb, window.DB_PATH + 'users', player.uid), (docSnap) => {        if(docSnap.exists()){           const data = docSnap.data();            if(data.isBanned) { window.isUserBannedLocally = true; openModal('modal-banned'); return; }           player.shards = data.shards; player.gems = data.gems; player.currentLevel = data.currentLevel; player.name = data.name;            player.accLevel = calcAccLevel(player.currentLevel);           player.titles = data.titles || ['مستكشف الألغاز']; player.equippedTitle = data.equippedTitle || 'مستكشف الألغاز';           player.avatars = data.avatars || ['https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak']; player.equippedAvatar = data.equippedAvatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak';           player.frames = data.frames || ['بدون إطار']; player.equippedFrame = data.equippedFrame || 'بدون إطار';           player.banners = data.banners || ['بدون بنر']; player.equippedBanner = data.equippedBanner || 'بدون بنر';           player.badges = data.badges || []; player.lastDaily = data.lastDaily || '';           player.favorites = data.favorites || [];           updateUI(); window.updateUIForAuth();        }     });  }};function applyGlobalSettings() {    if(!window.appSettings) return;    if(window.appSettings.bgUrl) { document.getElementById('app-container').style.backgroundImage = `url('${window.appSettings.bgUrl}')`; }     else { document.getElementById('app-container').style.backgroundImage = 'none'; }    if(window.appSettings.splashTitle) document.getElementById('splash-title').innerText = window.appSettings.splashTitle;    if(window.appSettings.splashSub) document.getElementById('splash-subtitle').innerText = window.appSettings.splashSub;        const updBanner = document.getElementById('global-update-banner');    if(window.appSettings.updateMsg && window.appSettings.updateMsg.trim() !== "") {        document.getElementById('global-update-text').innerText = window.appSettings.updateMsg;        if(updBanner) updBanner.classList.remove('hidden');    } else { if(updBanner) updBanner.classList.add('hidden'); }}window.updateUIForAuth = () => {  const guestSec = document.getElementById('auth-guest-section');  const loggedSec = document.getElementById('auth-logged-section');  const emailText = document.getElementById('profile-email-text');  const adminBtn = document.getElementById('owner-admin-btn-container');  const homeLoginBanner = document.getElementById('home-login-banner');    const currentUser = window.firebaseAuth ? window.firebaseAuth.currentUser : null;  const isLogged = currentUser && !currentUser.isAnonymous ? true : false;    if (isLogged) {      if(guestSec) guestSec.classList.add('hidden');      if(loggedSec) loggedSec.classList.remove('hidden');      if(emailText) emailText.innerText = currentUser.email || player.name || 'حساب زائر';      if(homeLoginBanner) homeLoginBanner.classList.add('hidden');            if (currentUser.email === OWNER_EMAIL) {          if(adminBtn) adminBtn.classList.remove('hidden');          const badge = document.getElementById('header-owner-badge');          if(badge) badge.classList.remove('hidden');      } else {          if(adminBtn) adminBtn.classList.add('hidden');          const badge = document.getElementById('header-owner-badge');          if(badge) badge.classList.add('hidden');      }  } else {      if(guestSec) guestSec.classList.remove('hidden');      if(loggedSec) loggedSec.classList.add('hidden');      if(emailText) emailText.innerText = 'غير مسجل';      if(homeLoginBanner) homeLoginBanner.classList.remove('hidden');      if(adminBtn) adminBtn.classList.add('hidden');      const badge = document.getElementById('header-owner-badge');      if(badge) badge.classList.add('hidden');  }};function updateUI() {  player.accLevel = calcAccLevel(player.currentLevel);     document.getElementById('currency-shards').innerText = getDisplayShards();   document.getElementById('currency-gems').innerText = getDisplayGems();  document.getElementById('header-name').innerText = player.name; document.getElementById('header-title').innerHTML = `${player.equippedTitle} <span class="bg-brand-500 text-white text-[8px] px-1 rounded">LVL ${player.accLevel}</span>`;  document.getElementById('header-avatar').src = player.equippedAvatar;  document.getElementById('header-frame-wrap').className = `relative rounded-full ${getFrameClass(player.equippedFrame)}`;  if(player.equippedFrame === 'أسطوري') document.getElementById('header-frame-wrap').classList.add('frame-mythic-wrap');  document.getElementById('profile-name-text').innerText = player.name; document.getElementById('profile-stat-level').innerText = player.currentLevel;  document.getElementById('profile-account-level-txt').innerText = `مستوى الحساب: ${player.accLevel}`;  document.getElementById('crate-acc-level').innerText = `مستواك: ${player.accLevel}`;    document.getElementById('profile-title-badge').innerText = player.equippedTitle; document.getElementById('profile-avatar-img').src = player.equippedAvatar;  document.getElementById('profile-frame-wrap').className = `relative mb-3 group rounded-full ${getFrameClass(player.equippedFrame)}`;  if(player.equippedFrame === 'أسطوري') document.getElementById('profile-frame-wrap').classList.add('frame-mythic-wrap');    const profileCard = document.getElementById('profile-card-container');  if(player.equippedBanner && player.equippedBanner !== 'بدون بنر') {      profileCard.style.backgroundImage = `url('${player.equippedBanner}')`;      profileCard.style.backgroundSize = 'cover';      profileCard.style.backgroundPosition = 'center';  } else { profileCard.style.backgroundImage = 'none'; }    const badgesContainer = document.getElementById('profile-badges-container');  badgesContainer.innerHTML = '';  if(player.badges.length > 0) {      player.badges.forEach(badge => {          let badgeClass = badge.includes('أسطورة') || badge.includes('نادر') ? 'badge-mythic' : 'badge-item';          badgesContainer.innerHTML += `<span class="${badgeClass}">${badge}</span>`;      });  } else { badgesContainer.innerHTML = '<span class="text-[10px] text-gray-500">لا توجد أوسمة بعد</span>'; }    const titleSelect = document.getElementById('equip-title-select'); titleSelect.innerHTML = '';  player.titles.forEach(t => { titleSelect.innerHTML += `<option value="${t}" ${player.equippedTitle === t ? 'selected' : ''}>${t}</option>`; });    const avatarSelect = document.getElementById('equip-avatar-select'); avatarSelect.innerHTML = '';  player.avatars.forEach((a, i) => { avatarSelect.innerHTML += `<option value="${a}" ${player.equippedAvatar === a ? 'selected' : ''}>صورة ${i+1}</option>`; });  const frameSelect = document.getElementById('equip-frame-select'); frameSelect.innerHTML = '';  player.frames.forEach((f) => { frameSelect.innerHTML += `<option value="${f}" ${player.equippedFrame === f ? 'selected' : ''}>${f}</option>`; });    const bannerSelect = document.getElementById('equip-banner-select'); bannerSelect.innerHTML = '';  player.banners.forEach((b, i) => { bannerSelect.innerHTML += `<option value="${b}" ${player.equippedBanner === b ? 'selected' : ''}>${b === 'بدون بنر' ? 'بدون بنر' : 'بنر ' + i}</option>`; });}async function savePlayer() {  if(!player.uid) return;  try { await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', player.uid), {       name: player.name, currentLevel: player.currentLevel,       shards: isOwner() ? 0 : player.shards, gems: isOwner() ? 0 : player.gems,       equippedTitle: player.equippedTitle, titles: player.titles,       avatars: player.avatars, equippedAvatar: player.equippedAvatar,       frames: player.frames, equippedFrame: player.equippedFrame,       banners: player.banners, equippedBanner: player.equippedBanner,       badges: player.badges, lastDaily: player.lastDaily, isBanned: player.isBanned,      favorites: player.favorites  }); } catch(e) {}}async function handleEmailLogin() {  const email = document.getElementById('auth-email-input').value.trim();  const pass = document.getElementById('auth-pass-input').value;  if(!email || !pass) return showToast("أدخل البيانات", "⚠️", "error");  try {       const cred = await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass);       await window.loadPlayerData(cred.user);      window.updateUIForAuth();      closeModal('modal-auth');       showToast("تم تسجيل الدخول", "✅", "success");   } catch (e) {      try {           const cred = await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass);           await window.loadPlayerData(cred.user);          window.updateUIForAuth();          closeModal('modal-auth');           showToast("تم إنشاء حساب جديد بنجاح", "✅", "success");       } catch(err) {           showToast("الرقم السري خاطئ أو البريد مستخدم", "❌", "error");       }  }}async function handleGoogleLogin() {     try {         const provider = new window.GoogleAuthProvider();         const cred = await window.signInWithPopup(window.firebaseAuth, provider);         await window.loadPlayerData(cred.user);        window.updateUIForAuth();        closeModal('modal-auth');         showToast("تم الدخول بنجاح", "✅", "success");     } catch(e) { showToast("فشل", "❌", "error"); } }async function handleFacebookLogin() {    try {        const provider = new window.FacebookAuthProvider();        const cred = await window.signInWithPopup(window.firebaseAuth, provider);        await window.loadPlayerData(cred.user);        window.updateUIForAuth();        closeModal('modal-auth');        showToast("تم الدخول بحساب فيسبوك بنجاح", "✅", "success");    } catch(e) { showToast("فشل الدخول بفيسبوك", "❌", "error"); }}async function handleAnonymousLogin() {     try {         const cred = await window.signInAnonymously(window.firebaseAuth);         await window.loadPlayerData(cred.user);        window.updateUIForAuth();        closeModal('modal-auth');         showToast("دخلت كزائر", "✅", "success");     } catch(e) { showToast("خطأ", "❌", "error"); } }async function handleLogout() { try { await window.signOut(window.firebaseAuth); showToast("وداعاً", "👋", "success"); window.location.reload(); } catch(e) {} }function checkDailyReward() {   if(screenHistory[screenHistory.length-1] !== 'home') return;   const today = new Date().toDateString();   const banner = document.getElementById('daily-reward-banner');   if(player.uid && player.lastDaily !== today) { if(banner) banner.classList.remove('hidden'); }   else { if(banner) banner.classList.add('hidden'); }}async function claimDailyReward() {   if(!player.uid) return showToast("سجل دخولك أولاً", "🔒", "error");   const today = new Date().toDateString();   if(player.lastDaily === today) return;   const isGem = Math.random() > 0.8;    const amount = isGem ? (Math.floor(Math.random() * 6) + 5) : (Math.floor(Math.random() * 21) + 10);   if(isGem) player.gems += amount; else player.shards += amount;   player.lastDaily = today; await savePlayer();   document.getElementById('daily-reward-banner').classList.add('hidden');   playSFX('win'); showToast(`استلمت مكافأة يومية: ${amount} ${isGem ? '💎' : '🧩'}`, "🎉", "success");   confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });}function playCurrentLevel() {  const lvl = dbLevels.find(l => l.num == player.currentLevel);  if(!lvl) return showToast("أنت أسطورة! أنهيت كل المراحل الحالية.", "🚀", "info");  loadLevel(lvl); navigateTo('game');}function renderWorldsGrid() {   const grid = document.getElementById('worlds-grid'); grid.innerHTML = '';   dbWorlds.forEach(w => {      const isUnlocked = player.currentLevel >= w.start;      const bg = isUnlocked ? 'glass-card border-brand-500/30' : 'bg-black/60 border-gray-800 opacity-70 grayscale';      grid.innerHTML += `<div onclick="openWorldLevels('${w.id}')" class="${bg} p-4 rounded-2xl flex items-center justify-between cursor-pointer active:scale-95 transition"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center text-2xl">${w.icon}</div><div><h3 class="text-sm font-black text-white font-messiri">${w.name}</h3><span class="text-[10px] text-gray-400">مراحل ${w.start} - ${w.end}</span></div></div>${!isUnlocked ? '<i class="fa-solid fa-lock text-gray-500"></i>' : '<i class="fa-solid fa-chevron-left text-brand-400"></i>'}</div>`;   });}function openWorldLevels(worldId) {   const w = dbWorlds.find(x => x.id === worldId); if(!w) return;   if(player.currentLevel < w.start) { playSFX('wrong'); return showToast("هذا العالم مغلق بعد!", "🔒", "error"); }   document.getElementById('levels-world-title').innerHTML = `${w.name} ${w.icon}`;   const grid = document.getElementById('levels-grid'); grid.innerHTML = '';   const wLevels = dbLevels.filter(l => l.world === worldId).sort((a,b)=>a.num - b.num);   wLevels.forEach(l => {      const isUnlocked = player.currentLevel >= l.num; const isPassed = player.currentLevel > l.num;      let btnClass = "bg-black/60 border-gray-800 text-gray-500 cursor-not-allowed";      if(isPassed) btnClass = "bg-green-900/30 border-green-500/40 text-green-400"; else if(isUnlocked) btnClass = "btn-3d-orange text-white";      grid.innerHTML += `<button ${isUnlocked ? `onclick="playSpecificLevel(${l.num})"` : ''} class="${btnClass} h-12 rounded-2xl font-black flex items-center justify-center border text-sm transition">${isUnlocked ? l.num : '<i class="fa-solid fa-lock text-xs"></i>'}</button>`;   }); navigateTo('levels');}function playSpecificLevel(num) { const lvl = dbLevels.find(l => l.num == num); if(lvl) { loadLevel(lvl); navigateTo('game'); } }function loadLevel(lvl) {  currentLevelObj = lvl; document.getElementById('game-level-num').innerText = `مرحلة ${lvl.num}`; document.getElementById('game-question-text').innerText = lvl.q;  const w = dbWorlds.find(x => x.id === lvl.world); if(w) document.getElementById('game-world-bg-icon').innerText = w.icon;    const imgEl = document.getElementById('game-question-img');  if(imgEl) {      if(lvl.img && lvl.img.trim() !== '') {          imgEl.src = lvl.img;          imgEl.classList.remove('hidden');      } else {          imgEl.classList.add('hidden');      }  }  currentSlots = Array(lvl.a.length).fill(null);  const arabicLetters = 'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'; availableLetters = lvl.a.split('');  while(availableLetters.length < 14) availableLetters.push(arabicLetters[Math.floor(Math.random() * arabicLetters.length)]);  availableLetters = availableLetters.sort(() => Math.random() - 0.5).map((char, index) => ({ id: index, char: char, used: false }));  renderGameUI();// تهيئة اللعبة عند التحميلdocument.addEventListener("DOMContentLoaded", () => {    initializeApp();});function initializeApp() {    updateUserInterface();    renderWorlds();    renderStore();    renderBoxes();    renderProfileItems();    if (currentUser.role === "owner") {        document.getElementById("adminBtn").classList.remove("hidden");        document.getElementById("ownerBadge").classList.remove("hidden");        document.getElementById("userMoney").innerText = `🪙 ∞`;        document.getElementById("userMoney").classList.add("infinite-money");    }}function useHintReveal() {  if(player.shards < 15 && !isOwner()) { playSFX('wrong'); return showToast("رصيد الشظايا غير كافِ", "⚠️", "error"); }  const emptyIndex = currentSlots.findIndex(s => s === null);  if(emptyIndex === -1) return;  const correctChar = currentLevelObj.a[emptyIndex];  const targetLetter = availableLetters.find(l => !l.used && l.char === correctChar);  if(targetLetter) {     if(!isOwner()) player.shards -= 15; savePlayer(); updateUI();     targetLetter.used = true; currentSlots[emptyIndex] = targetLetter; renderGameUI();  }}function useHintRemoveWrong() {   if(player.shards < 10 && !isOwner()) { playSFX('wrong'); return showToast("رصيد الشظايا غير كافِ", "⚠️", "error"); }   const wrongLetters = availableLetters.filter(l => !l.used && !currentLevelObj.a.includes(l.char));   if(wrongLetters.length > 0) {      if(!isOwner()) player.shards -= 10; savePlayer(); updateUI();      wrongLetters[0].used = true; renderGameUI();   } else showToast("لا يوجد حروف خاطئة زائدة!", "💡", "info");}function useHintSkip() {   if(player.shards < 30 && !isOwner()) { playSFX('wrong'); return showToast("رصيد الشظايا غير كافِ", "⚠️", "error"); }   if(!isOwner()) player.shards -= 30; savePlayer(); updateUI();   document.getElementById('win-reward-text').innerText = `تم تخطي المرحلة!`;   playSFX('win'); openModal('modal-win');// التنقل بين الأقسامfunction showSection(sectionId) {    const sections = document.querySelectorAll("main section");    sections.forEach(sec => sec.classList.add("hidden"));    document.getElementById(sectionId).classList.remove("hidden");}// تحديث واجهة البيانات العامةfunction updateUserInterface() {    document.getElementById("userGems").innerText = `💎 ${currentUser.gems}`;    document.getElementById("userShards").innerText = `🧩 ${currentUser.shards}`;    document.getElementById("profileName").innerText = currentUser.name;    document.getElementById("playerTitle").innerHTML = `اللقب الحالي: <span>${currentUser.title}</span>`;    document.getElementById("playerXP").innerText = currentUser.xp;}// توليد 10 عوالم وكل عالم يحوي مراحلfunction renderWorlds() {    const worldsList = document.getElementById("worldsList");    worldsList.innerHTML = "";    for (let i = 1; i <= 10; i++) {        let worldCard = document.createElement("div");        worldCard.className = "card-box box-rare";        worldCard.innerHTML = `العالم ${i} <br><small>100 مرحلة</small>`;        worldCard.onclick = () => completeWorldChallenge(i);        worldsList.appendChild(worldCard);    }}function renderGameUI() {  const slotsContainer = document.getElementById('answer-slots-container'); slotsContainer.innerHTML = '';  currentSlots.forEach((slot, index) => { slotsContainer.innerHTML += `<div onclick="removeLetterFromSlot(${index})" class="letter-slot shadow-inner">${slot ? slot.char : ''}</div>`; });  const poolContainer = document.getElementById('letters-pool-container'); poolContainer.innerHTML = '';  availableLetters.forEach(l => { poolContainer.innerHTML += `<button onclick="addLetterToSlot(${l.id})" class="letter-btn ${l.used ? 'hidden-letter' : ''}">${l.char}</button>`; });    const isFull = currentSlots.every(s => s !== null);  const currentWord = currentSlots.map(s => s ? s.char : '').join('');  if (isFull && currentWord !== currentLevelObj.a) { playSFX('wrong'); }  checkWin();// إتمام العالم ومنح الألقاب والـ XPfunction completeWorldChallenge(worldNum) {    currentUser.completedWorlds = worldNum;    currentUser.xp += 500;    const autoTitles = ["مبتدئ الألغاز", "مستكشف متمرس", "قاهر الصعاب", "عبقري العصر", "أسطورة الألغاز", "خبير اللغز", "سيد العوالم العشرة"];    let assignedTitle = autoTitles[Math.min(worldNum - 1, autoTitles.length - 1)];    currentUser.title = assignedTitle;    alert(`تهانينا! أنهيت العالم ${worldNum}. تم منحك لقب تلقائي جديد: "${assignedTitle}" و 500 XP!`);    updateUserInterface();}// عرض متجر العناصر القابلة للتعديلfunction renderStore() {    const storeContainer = document.getElementById("storeItems");    storeContainer.innerHTML = "";    gameDatabase.storeItems.forEach(item => {        let itemDiv = document.createElement("div");        itemDiv.className = "card-box box-epic";        itemDiv.innerHTML = `${item.name}<br><small>السعر: ${item.price} جوهرة</small>`;        itemDiv.onclick = () => buyStoreItem(item);        storeContainer.appendChild(itemDiv);    });}function addLetterToSlot(letterId) { playSFX('click'); const emptyIndex = currentSlots.findIndex(s => s === null); if (emptyIndex !== -1) { const l = availableLetters.find(x => x.id === letterId); if(l && !l.used) { l.used = true; currentSlots[emptyIndex] = l; renderGameUI(); } } }function removeLetterFromSlot(slotIndex) { const slot = currentSlots[slotIndex]; if (slot) { playSFX('click'); const l = availableLetters.find(x => x.id === slot.id); if(l) l.used = false; currentSlots[slotIndex] = null; renderGameUI(); } }function removeLastLetter() { for(let i=currentSlots.length-1; i>=0; i--){ if(currentSlots[i] !== null) { removeLetterFromSlot(i); break; } } }function shuffleLetters() { playSFX('click'); availableLetters.sort(() => Math.random() - 0.5); renderGameUI(); }function checkWin() {  const currentWord = currentSlots.map(s => s ? s.char : '').join('');  if (currentWord === currentLevelObj.a) {    playSFX('win'); confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });    document.getElementById('win-reward-text').innerText = `حصلت على +${currentLevelObj.shards} شظية 🧩`;    setTimeout(() => { openModal('modal-win'); }, 500);  }function buyStoreItem(item) {    currentUser.inventory.push(item.name);    alert(`تم شراء العنصر (${item.name}) وإضافته إلى حقيبتك بنجاح!`);    renderProfileItems();}// عرض الصناديق المتعددة الندرةfunction renderBoxes() {    const boxesContainer = document.getElementById("boxesList");    boxesContainer.innerHTML = "";    const boxTypes = [        { name: "صندوق شائع", class: "box-common" },        { name: "صندوق نادر", class: "box-rare" },        { name: "صندوق ملحمي", class: "box-epic" },        { name: "صندوق أسطوري", class: "box-legendary" }    ];    boxTypes.forEach(box => {        let boxDiv = document.createElement("div");        boxDiv.className = `card-box ${box.class}`;        boxDiv.innerText = box.name;        boxDiv.onclick = () => openMysteryBox(box.name);        boxesContainer.appendChild(boxDiv);    });}async function nextLevelFromWinModal() {  closeModal('modal-win');  if (player.currentLevel === currentLevelObj.num) {     if(!isOwner()) player.shards += currentLevelObj.shards;     player.currentLevel += 1;      player.accLevel = calcAccLevel(player.currentLevel);      await savePlayer();          const currentWorld = dbWorlds.find(w => w.id === currentLevelObj.world);     if(currentWorld && currentWorld.end == currentLevelObj.num) {        let gotTop10 = false;        if(!isOwner()) {            player.gems += 100; player.shards += 500;           if(currentWorld.rewardTitle && !player.titles.includes(currentWorld.rewardTitle)) {               player.titles.push(currentWorld.rewardTitle);               player.badges.push('أنهى ' + currentWorld.name);            }           let finishers = currentWorld.finishersCount || 0;           if(finishers < 10) {              gotTop10 = true;              if(currentWorld.top10Reward && !player.titles.includes(currentWorld.top10Reward)) {                  player.titles.push(currentWorld.top10Reward);                  player.badges.push('🏆 أسطورة ' + currentWorld.name);               }              await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', currentWorld.id), { finishersCount: finishers + 1 });           }        }        await savePlayer();        document.getElementById('world-complete-title-reward').innerText = currentWorld.rewardTitle ? `+ لقب الإتمام: ${currentWorld.rewardTitle}` : '';        document.getElementById('world-complete-top10').innerText = gotTop10 ? `🎉 مبروك! أنت من أول 10 أساطير أنهوا العالم! جائزتك: ${currentWorld.top10Reward}` : '';        openModal('modal-world-complete'); playSFX('win');        return;     }  }  playCurrentLevel();function openMysteryBox(boxName) {    alert(`لقد فتحت ${boxName}! حصلت عشوائياً على قالب أفاتار وعنصر مميز.`);}function closeWorldCompleteAndGoNext() { closeModal('modal-world-complete'); playCurrentLevel(); }function renderCrates() {    const grid = document.getElementById('crates-grid'); if(!grid) return; grid.innerHTML = '';    if(!dbCrates || dbCrates.length === 0) return grid.innerHTML = '<div class="text-center text-gray-400 text-xs py-8">لا توجد بكجات حالياً.</div>';        dbCrates.forEach(crate => {       const isLocked = player.accLevel < (crate.minLevel || 1);       grid.innerHTML += `       <div class="glass-card p-4 rounded-3xl border ${isLocked ? 'border-gray-700 opacity-70' : 'border-white/10'} text-center relative overflow-hidden group">           ${isLocked ? `<div class="absolute inset-0 bg-black/80 z-20 flex flex-col items-center justify-center"><i class="fa-solid fa-lock text-3xl text-gray-500 mb-2"></i><span class="text-xs font-black text-red-400">يفتح في مستوى ${crate.minLevel}</span></div>` : ''}           <div class="text-5xl mb-2 group-hover:scale-110 transition drop-shadow-lg">${crate.icon}</div>           <h3 class="text-sm font-black text-amber-300 font-messiri mb-1">${crate.name}</h3>           <p class="text-[10px] text-gray-400 mb-3 line-clamp-2">افتح البكج واحصل على جوائز عشوائية نادرة!</p>           <button onclick="openCrate('${crate.id}')" class="${crate.currency === 'gems' ? 'btn-3d-purple' : 'btn-3d-orange'} w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2">               فتح مقابل ${crate.price} ${crate.currency === 'gems' ? '💎' : '🧩'}           </button>       </div>`;// عرض عناصر البروفايل المميزfunction renderProfileItems() {    const list = document.getElementById("profileItemsList");    list.innerHTML = "";    currentUser.inventory.forEach(invItem => {        let div = document.createElement("div");        div.className = "card-box box-common";        div.innerText = invItem;        list.appendChild(div);    });}async function openCrate(crateId) {    const crate = dbCrates.find(c => c.id === crateId);    if (!crate) return;    if (!isOwner() && player.accLevel < (crate.minLevel || 1)) { playSFX('wrong'); return showToast(`تحتاج مستوى حساب ${crate.minLevel} للفتح!`, "🔒", "error"); }    if (!isOwner() && player[crate.currency] < crate.price) { playSFX('wrong'); return showToast("لا تملك عملات كافية لفتح الصندوق!", "⚠️", "error"); }    if (!isOwner()) player[crate.currency] -= crate.price;    await savePlayer(); updateUI();    playSFX('crate_open');    openModal('modal-crate-open');    document.getElementById('crate-shake-icon').innerText = crate.icon;    document.getElementById('crate-shake-icon').classList.add('animate-shake-crate');    document.getElementById('crate-result-text').classList.add('hidden');    document.getElementById('crate-reward-desc').classList.add('hidden');    document.getElementById('crate-close-btn').classList.add('hidden');    setTimeout(async () => {        const random = Math.random() * 100;        let cumulative = 0; let wonItem = null;        for (let drop of crate.drops) {            cumulative += drop.chance;            if (random <= cumulative) { wonItem = drop; break; }// استرداد الأكواد (قوالب، ألقاب، عناصر)function redeemCode() {    const codeInput = document.getElementById("promoCode").value.trim();    if (gameDatabase.customCodes[codeInput]) {        let reward = gameDatabase.customCodes[codeInput];        if (reward.type === "title") {            currentUser.title = reward.value;            alert(`تم استرداد الكود بنجاح! حصلت على اللقب: ${reward.value}`);        } else {            currentUser.inventory.push(reward.value);            alert(`تم استرداد الكود بنجاح! حصلت على العنصر: ${reward.value}`);        }        if(!wonItem) wonItem = crate.drops[0];        let msg = "";        if (wonItem.type === 'shards') { player.shards += wonItem.amount; msg = `+${wonItem.amount} شظية 🧩`; }        else if (wonItem.type === 'gems') { player.gems += wonItem.amount; msg = `+${wonItem.amount} جوهرة 💎`; }        else if (wonItem.type === 'title') { if(!player.titles.includes(wonItem.value)) player.titles.push(wonItem.value); msg = `لقب جديد: ${wonItem.value} ✨`; }        else if (wonItem.type === 'frame') { if(!player.frames.includes(wonItem.value)) player.frames.push(wonItem.value); msg = `إطار جديد: ${wonItem.value} 🖼️`; }        await savePlayer(); updateUI();                document.getElementById('crate-shake-icon').classList.remove('animate-shake-crate');        document.getElementById('crate-shake-icon').innerText = '🎉';        document.getElementById('crate-result-text').classList.remove('hidden');        document.getElementById('crate-reward-desc').innerText = msg;        document.getElementById('crate-reward-desc').classList.remove('hidden');        document.getElementById('crate-close-btn').classList.remove('hidden');        confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });    }, 1500);}function renderShopItems() {   const grid = document.getElementById('shop-items-grid'); if(!grid) return; grid.innerHTML = '';   if(!dbShopItems || dbShopItems.length === 0) return grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 text-xs py-8">المتجر فارغ حالياً.</div>';   dbShopItems.forEach(item => {      let isOwned = false;      if(item.type === 'title') isOwned = player.titles.includes(item.name);      else if(item.type === 'avatar') isOwned = player.avatars.includes(item.name);      else if(item.type === 'frame') isOwned = player.frames.includes(item.name);      else if(item.type === 'banner') isOwned = player.banners.includes(item.name);      let visual = '';      if(item.type === 'avatar') visual = `<img src="${item.name}" class="w-12 h-12 rounded-full mb-2 bg-black/50 border border-cyan-500 object-cover"/>`;      else if(item.type === 'banner') visual = `<div class="w-full h-12 rounded-xl mb-2 bg-black/50 border border-pink-500 object-cover" style="background-image:url('${item.name}'); background-size:cover; background-position:center;"></div>`;      else if(item.type === 'frame') {         const cls = getFrameClass(item.name);         visual = `<div class="w-12 h-12 rounded-full mb-2 bg-black/50 flex items-center justify-center text-xs ${cls} ${cls===''?'border border-white/20':''} ${item.name==='أسطوري'?'frame-mythic-wrap':''}">🖼️</div><span class="text-xs font-black text-purple-300 mb-2">إطار: ${item.name}</span>`;      }      else visual = `<span class="text-xs font-black text-brand-300 mb-2">لقب: ${item.name}</span>`;      grid.innerHTML += `         <div class="glass-card p-3 rounded-2xl border ${isOwned ? 'border-green-500/50' : 'border-white/10'} text-center flex flex-col items-center justify-between">            ${visual}            ${isOwned ? `<span class="text-[10px] text-green-400 font-bold bg-green-500/20 px-2 py-1 rounded-full w-full">مملوك</span>` :             `<div class="flex gap-1 w-full mt-2">               ${item.gems > 0 ? `<button onclick="buyShopItem('${item.id}', 'gems', ${item.gems})" class="flex-1 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 text-[10px] font-bold py-1.5 rounded-lg border border-purple-500/40 transition">${item.gems} 💎</button>` : ''}               ${item.shards > 0 ? `<button onclick="buyShopItem('${item.id}', 'shards', ${item.shards})" class="flex-1 bg-brand-600/30 hover:bg-brand-600/50 text-brand-300 text-[10px] font-bold py-1.5 rounded-lg border border-brand-500/40 transition">${item.shards} 🧩</button>` : ''}            </div>`}         </div>      `;   });}async function buyShopItem(id, currency, cost) {   const item = dbShopItems.find(x => x.id === id); if(!item) return;   if(!isOwner() && player[currency] < cost) { playSFX('wrong'); return showToast(`الرصيد غير كافِ`, "⚠️", "error"); }   if(!isOwner()) player[currency] -= cost;    if(item.type === 'title') player.titles.push(item.name);   else if(item.type === 'avatar') player.avatars.push(item.name);   else if(item.type === 'frame') player.frames.push(item.name);   else if(item.type === 'banner') player.banners.push(item.name);      await savePlayer(); renderShopItems(); showToast(`تم الشراء بنجاح`, "🎉", "success");}function calculateProfileRank() {    if(!player.uid) return;    const sorted = [...allUsers].sort((a,b) => { if(b.currentLevel === a.currentLevel) return b.shards - a.shards; return b.currentLevel - a.currentLevel; });    const rankIndex = sorted.findIndex(u => u.uid === player.uid);    const rankSpan = document.getElementById('profile-stat-rank');    if(rankIndex !== -1) { rankSpan.innerText = `#${rankIndex + 1}`; rankSpan.classList.add(rankIndex < 3 ? 'text-yellow-400' : 'text-amber-400'); } else { rankSpan.innerText = '-'; }}let currentLeaderboardTab = 'all';function switchLeaderboardTab(tab) {   currentLeaderboardTab = tab;   document.getElementById('btn-lb-all').className = tab === 'all' ? 'bg-brand-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition' : 'bg-black/50 text-gray-400 px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition';   document.getElementById('btn-lb-favs').className = tab === 'favs' ? 'bg-brand-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition' : 'bg-black/50 text-gray-400 px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition';   renderLeaderboard();}function renderLeaderboard() {   let usersToRender = [...allUsers];   if(currentLeaderboardTab === 'favs') {       usersToRender = usersToRender.filter(u => player.favorites.includes(u.uid));   }   const sorted = usersToRender.sort((a,b) => { if(b.currentLevel === a.currentLevel) return b.shards - a.shards; return b.currentLevel - a.currentLevel; }).slice(0, 50);      const top3 = document.getElementById('leaderboard-top-3');   const list = document.getElementById('leaderboard-list');      if (currentLeaderboardTab === 'all') {       top3.classList.remove('hidden');       top3.innerHTML = '';       if(sorted.length >= 2) top3.innerHTML += buildTopCard(sorted[1], '🥈', 'cyan');       if(sorted.length >= 1) top3.innerHTML += buildTopCard(sorted[0], '👑', 'yellow', true);       if(sorted.length >= 3) top3.innerHTML += buildTopCard(sorted[2], '🥉', 'amber');       list.innerHTML = '';       sorted.slice(3).forEach((u, i) => {          const frameCls = getFrameClass(u.equippedFrame);          list.innerHTML += `<div onclick="openPublicProfile('${u.uid}')" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-white/5 cursor-pointer hover:bg-white/5"><div class="flex items-center gap-3"><span class="text-xs font-black text-gray-500 w-4">${i+4}</span><div class="relative rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-10 h-10 rounded-full border border-gray-600 bg-game-darkBg object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-[10px] z-20">👑</span>` : ''}</div><div><h4 class="text-xs font-black text-white ${u.email === OWNER_EMAIL ? 'text-amber-400' : ''}">${u.name}</h4><span class="text-[10px] text-brand-400 font-bold">مرحلة ${u.currentLevel}</span></div></div><button class="bg-black/50 text-gray-400 px-2 py-1 rounded-lg text-[10px] border border-white/10 flex gap-1 items-center"><i class="fa-solid fa-eye"></i> زيارة</button></div>`;       });   } else {       top3.classList.add('hidden');       list.innerHTML = '';       if(sorted.length === 0) return list.innerHTML = '<div class="text-center text-gray-400 text-xs py-8">لا يوجد لاعبين في المفضلة</div>';       sorted.forEach((u, i) => {          const frameCls = getFrameClass(u.equippedFrame);          list.innerHTML += `<div onclick="openPublicProfile('${u.uid}')" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-brand-500/30 cursor-pointer hover:bg-white/5"><div class="flex items-center gap-3"><span class="text-xs font-black text-gray-500 w-4">${i+1}</span><div class="relative rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-10 h-10 rounded-full border border-gray-600 bg-game-darkBg object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-[10px] z-20">👑</span>` : ''}</div><div><h4 class="text-xs font-black text-white ${u.email === OWNER_EMAIL ? 'text-amber-400' : ''}">${u.name}</h4><span class="text-[10px] text-brand-400 font-bold">مرحلة ${u.currentLevel}</span></div></div><button class="bg-black/50 text-gray-400 px-2 py-1 rounded-lg text-[10px] border border-white/10 flex gap-1 items-center"><i class="fa-solid fa-eye"></i> زيارة</button></div>`;       });   }}function buildTopCard(u, icon, color, isFirst=false) {   const frameCls = getFrameClass(u.equippedFrame);   return `<div onclick="openPublicProfile('${u.uid}')" class="glass-card${isFirst?'-orange scale-105 shadow-glow-orange border-amber-400 border-2' : ` border border-${color}-500/30`} p-3 rounded-2xl text-center flex flex-col items-center cursor-pointer"><span class="text-${isFirst?'2xl':'lg'} mb-1">${icon}</span><div class="relative mb-1 rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-${isFirst?'12':'10'} h-${isFirst?'12':'10'} rounded-full border border-${color}-400 object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-xs z-20">👑</span>` : ''}</div><span class="text-[11px] font-black text-${isFirst?'yellow-300':'white'} truncate w-full mt-1">${u.name}</span><span class="text-[10px] text-${color}-400 font-bold">مرحلة ${u.currentLevel}</span></div>`;}let viewedUser = null;function openPublicProfile(uid) {   viewedUser = allUsers.find(u => u.uid === uid); if(!viewedUser) return;   document.getElementById('pub-avatar-img').src = viewedUser.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${viewedUser.name}`;   document.getElementById('pub-name-text').innerText = viewedUser.name;   document.getElementById('pub-title-badge').innerText = viewedUser.equippedTitle || 'مستكشف الألغاز';   document.getElementById('pub-stat-level').innerText = viewedUser.currentLevel;   document.getElementById('pub-stat-acclvl').innerText = calcAccLevel(viewedUser.currentLevel);   document.getElementById('pub-stat-score').innerText = (viewedUser.currentLevel * 100) + viewedUser.shards;      const fWrap = document.getElementById('pub-frame-wrap');   fWrap.className = `relative mb-3 rounded-full ${getFrameClass(viewedUser.equippedFrame)}`;   if(viewedUser.equippedFrame === 'أسطوري') fWrap.classList.add('frame-mythic-wrap');   const pubBadges = document.getElementById('pub-profile-badges'); pubBadges.innerHTML = '';   if(viewedUser.badges && viewedUser.badges.length > 0) {       viewedUser.badges.forEach(badge => {           let badgeClass = badge.includes('أسطورة') || badge.includes('نادر') ? 'badge-mythic' : 'badge-item';           pubBadges.innerHTML += `<span class="${badgeClass}">${badge}</span>`;       });   } else { pubBadges.innerHTML = '<span class="text-[10px] text-gray-500">لا يملك أوسمة بعد</span>'; }   if(viewedUser.email === OWNER_EMAIL) { document.getElementById('pub-owner-badge').classList.remove('hidden'); document.getElementById('pub-name-text').classList.add('text-amber-400'); } else { document.getElementById('pub-owner-badge').classList.add('hidden'); document.getElementById('pub-name-text').classList.remove('text-amber-400'); }   if(isOwner() && viewedUser.email !== OWNER_EMAIL) document.getElementById('pub-admin-actions').classList.remove('hidden'); else document.getElementById('pub-admin-actions').classList.add('hidden');      const favBtn = document.getElementById('pub-fav-btn');   if(favBtn) favBtn.innerHTML = player.favorites.includes(viewedUser.uid) ? '<i class="fa-solid fa-heart text-red-500"></i> إزالة' : '<i class="fa-regular fa-heart text-gray-400"></i> مفضلة';   navigateTo('public-profile');}async function toggleFavoriteUser() {    if(!viewedUser || !player.uid) return showToast("سجل الدخول أولاً", "🔒", "error");    const idx = player.favorites.indexOf(viewedUser.uid);    if(idx === -1) { player.favorites.push(viewedUser.uid); showToast("تم الإضافة للمفضلة", "❤️", "success"); }    else { player.favorites.splice(idx, 1); showToast("تم الإزالة من المفضلة", "💔", "info"); }    await savePlayer();    const favBtn = document.getElementById('pub-fav-btn');    if(favBtn) favBtn.innerHTML = player.favorites.includes(viewedUser.uid) ? '<i class="fa-solid fa-heart text-red-500"></i> إزالة' : '<i class="fa-regular fa-heart text-gray-400"></i> مفضلة';}async function changeEquippedTitle(title) { player.equippedTitle = title; await savePlayer(); updateUI(); showToast("تم تغيير اللقب", "✅", "success"); }async function changeEquippedAvatar(avatarUrl) { player.equippedAvatar = avatarUrl; await savePlayer(); updateUI(); showToast("تم تغيير الصورة", "✅", "success"); }async function changeEquippedFrame(frame) { player.equippedFrame = frame; await savePlayer(); updateUI(); showToast("تم تغيير الإطار", "✅", "success"); }async function changeEquippedBanner(banner) { player.equippedBanner = banner; await savePlayer(); updateUI(); showToast("تم تغيير البنر", "✅", "success"); }async function editProfileName() {     const newName = prompt("أدخل اسمك الجديد (يجب أن يكون غير مستخدم):", player.name);     if(newName && newName.trim().length > 2) {         const nameExists = allUsers.some(u => u.name.toLowerCase() === newName.trim().toLowerCase() && u.uid !== player.uid);        if(nameExists) { playSFX('wrong'); return showToast("هذا الاسم مستخدم مسبقاً، يرجى اختيار اسم آخر!", "⚠️", "error"); }        player.name = newName.trim(); await savePlayer(); updateUI(); showToast("تم تغيير الاسم بنجاح", "✅", "success");     } }async function editProfileAvatarCustom() {   const newUrl = prompt("أدخل رابط الصورة (URL) من الإنترنت لتكون صورتك الشخصية:", player.equippedAvatar);   if(newUrl && newUrl.trim().length > 5) {      player.equippedAvatar = newUrl.trim();      if(!player.avatars.includes(newUrl.trim())) player.avatars.push(newUrl.trim());      await savePlayer(); updateUI(); showToast("تم تحديث صورتك الشخصية!", "📸", "success");   }}function searchPlayersGlobal() {   const q = document.getElementById('global-search-input').value.trim().toLowerCase();   const resDiv = document.getElementById('global-search-results');   const list = document.getElementById('leaderboard-list');   const top3 = document.getElementById('leaderboard-top-3');      if(!q) {       resDiv.classList.add('hidden');       list.classList.remove('hidden');       if(currentLeaderboardTab === 'all') top3.classList.remove('hidden');       return;    }      resDiv.classList.remove('hidden'); list.classList.add('hidden'); top3.classList.add('hidden'); resDiv.innerHTML = '';   const filtered = allUsers.filter(u => u.name.toLowerCase().includes(q));      if(filtered.length === 0) return resDiv.innerHTML = '<div class="glass-card p-4 text-center text-gray-400 text-xs rounded-2xl">لم يتم العثور على اللاعب.</div>';      filtered.forEach((u, i) => {      const frameCls = getFrameClass(u.equippedFrame);      resDiv.innerHTML += `<div onclick="openPublicProfile('${u.uid}')" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-brand-500/30 cursor-pointer hover:bg-white/5 transition"><div class="flex items-center gap-3"><div class="relative rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-10 h-10 rounded-full border border-gray-600 bg-game-darkBg object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-[10px] z-20">👑</span>` : ''}</div><div><h4 class="text-xs font-black text-white ${u.isBanned ? 'text-red-500 line-through' : ''}">${u.name}</h4><span class="text-[10px] text-brand-400 font-bold">مرحلة ${u.currentLevel}</span></div></div><button class="bg-brand-500/20 text-brand-400 px-3 py-1.5 rounded-xl text-[10px] font-bold flex gap-1 items-center"><i class="fa-solid fa-eye"></i> زيارة</button></div>`;   });}async function claimPromoCode() {   const codeInput = document.getElementById('redeem-code-input').value.trim().toUpperCase();   if(!codeInput) return showToast("أدخل الكود", "⚠️", "error"); if(!player.uid) return showToast("يجب تسجيل الدخول", "🔒", "error");   try {      const codeRef = window.doc(window.firebaseDb, window.DB_PATH + 'codes', codeInput); const snap = await window.getDoc(codeRef);      if(!snap.exists() || !snap.data().active) return showToast("كود غير صالح أو منتهي", "❌", "error");      const claimedRef = window.doc(window.firebaseDb, window.DB_PATH + `users/${player.uid}/claimedCodes`, codeInput);      if((await window.getDoc(claimedRef)).exists()) return showToast("استخدمت الكود مسبقاً", "⚠️", "error");            const data = snap.data(); let msg = "حصلت على: ";      if(data.gems > 0) { player.gems += data.gems; msg += `${data.gems}💎 `; }      if(data.shards > 0) { player.shards += data.shards; msg += `${data.shards}🧩 `; }      if(data.itemType && data.itemValue && data.itemType !== 'none') {          if(data.itemType === 'title' && !player.titles.includes(data.itemValue)) { player.titles.push(data.itemValue); msg += `لقب (${data.itemValue}) `; }         if(data.itemType === 'avatar' && !player.avatars.includes(data.itemValue)) { player.avatars.push(data.itemValue); msg += `صورة شخصية جديدة `; }         if(data.itemType === 'frame' && !player.frames.includes(data.itemValue)) { player.frames.push(data.itemValue); msg += `إطار (${data.itemValue}) `; }         if(data.itemType === 'banner' && !player.banners.includes(data.itemValue)) { player.banners.push(data.itemValue); msg += `بنر خلفية جديد `; }      }      await savePlayer(); await window.setDoc(claimedRef, { claimedAt: new Date().toISOString() });      closeModal('modal-redeem'); showToast(msg, "🎉", "success"); document.getElementById('redeem-code-input').value = ''; confetti(); playSFX('win');   } catch(e) { showToast("خطأ", "❌", "error"); }}// ================= لوحة تحكم الإدارة (المالك) =================function switchAdminTab(tab) {   document.querySelectorAll('[id^="admin-sec-"]').forEach(el => el.classList.add('hidden'));   document.querySelectorAll('[id^="admintab-"]').forEach(el => el.className = el.id.includes('danger') ? "py-2 px-1 rounded-xl text-red-400" : "py-2 px-1 rounded-xl text-gray-400");   document.getElementById(`admin-sec-${tab}`).classList.remove('hidden');   const btn = document.getElementById(`admintab-${tab}`);   if(tab === 'danger') btn.className = "py-2 px-1 rounded-xl bg-red-600 text-white font-black"; else btn.className = "py-2 px-1 rounded-xl bg-brand-500 text-white font-black";   if(tab === 'gift') renderAdminCodes();   if(tab === 'crates') renderAdminCrates();        updateUserInterface();        renderProfileItems();    } else {        alert("الكود غير صحيح أو منتهي الصلاحية.");    }}function populateAdminDropdowns() {   const sel = document.getElementById('adm-lvl-world'); sel.innerHTML = '';   dbWorlds.forEach(w => { sel.innerHTML += `<option value="${w.id}">${w.name} ${w.icon}</option>`; });}// نظام البحث عن الأشخاص والمفضلينfunction searchUsers() {    const query = document.getElementById("searchInput").value.trim();    const resultsContainer = document.getElementById("searchResults");    if (!query) return;async function adminSaveGlobalSettings() {    const bg = document.getElementById('adm-setting-bg').value.trim();    const splashT = document.getElementById('adm-setting-splash-title').value.trim();    const splashS = document.getElementById('adm-setting-splash-sub').value.trim();    const updMsg = document.getElementById('adm-setting-update-msg').value.trim();    try {        await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), { bgUrl: bg, splashTitle: splashT, splashSub: splashS, updateMsg: updMsg }, { merge: true });        showToast("تم تطبيق التحديثات على جميع اللاعبين!", "🚀", "success");    } catch(e) { showToast("خطأ في حفظ الإعدادات", "❌", "error"); }    resultsContainer.innerHTML = `        <div style="background:#1b1b2f; padding:12px; margin-top:10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">            <span>اللاعب: <strong>${query}</strong> (المستوى: 45)</span>            <button onclick="addToFavorites('${query}')" style="background:#e94560; border:none; padding:6px 12px; color:#fff; border-radius:4px; cursor:pointer;">إضافة للمفضلة ⭐</button>        </div>    `;}async function adminGenerateMassiveGame() {   if(!confirm("تحذير: سيتم توليد 10 عوالم جديدة وبداخلها 1000 مرحلة تلقائياً. هل أنت متأكد؟")) return;      const progEl = document.getElementById('massive-gen-progress-container');   const progBar = document.getElementById('massive-gen-progress-bar');   const progText = document.getElementById('massive-gen-progress-text');   if(progEl) progEl.classList.remove('hidden');   showToast("جاري التوليد الشامل... يرجى الانتظار", "⏳", "info");      const easyWords = ['قمر','شمس','بحر','نهر','جبل','نجم','سماء','نار','ماء','ثلج','رمل','أسد','نمر','دب','فيل'];   const medWords = ['كوكب','محيط','صحراء','غابة','بركان','زلزال','عاصفة','إعصار','جليد','سفينة','طائرة','سيارة','قطار'];   const hardWords = ['جاذبية','ديناميكا','فلسفة','تاريخ','جغرافيا','اقتصاد','خوارزمية','إلكترون','مجرة','أكسجين'];   const worlds = [        { id: 'w1', name: 'غابة البداية', icon: '🌲', rewardTitle: 'حارس الغابة', top10Reward: 'أسطورة الغابة' },        { id: 'w2', name: 'صحراء الغموض', icon: '🏜️', rewardTitle: 'فارس الصحراء', top10Reward: 'عقرب الرمال' },        { id: 'w3', name: 'جبل الجليد', icon: '🏔️', rewardTitle: 'قاهر الصقيع', top10Reward: 'التنين الثلجي' },        { id: 'w4', name: 'بركان الغضب', icon: '🌋', rewardTitle: 'سيد النار', top10Reward: 'العنقاء' },        { id: 'w5', name: 'أعماق المحيط', icon: '🌊', rewardTitle: 'حاكم البحار', top10Reward: 'لڤياثان' },        { id: 'w6', name: 'مدينة السحاب', icon: '☁️', rewardTitle: 'صقر السماء', top10Reward: 'سيد الرياح' },        { id: 'w7', name: 'بوابة المجرة', icon: '🌌', rewardTitle: 'رائد الفضاء', top10Reward: 'نجم المجرة' },        { id: 'w8', name: 'عالم النيون', icon: '🏙️', rewardTitle: 'المخترق', top10Reward: 'سيد السايبر' },        { id: 'w9', name: 'متاهة الزمن', icon: '⏳', rewardTitle: 'حارس الزمن', top10Reward: 'مسافر الزمن' },        { id: 'w10', name: 'قلعة الأساطير', icon: '🏰', rewardTitle: 'الأسطورة الخالدة', top10Reward: 'حاكم العوالم' }   ];   try {     let globalLevel = 1;     for (let i = 0; i < worlds.length; i++) {          let w = worlds[i]; let start = globalLevel; let end = globalLevel + 99;         await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', w.id), { id: w.id, name: w.name, icon: w.icon, start: start, end: end, rewardTitle: w.rewardTitle, top10Reward: w.top10Reward, finishersCount: 0 });                  let proms = [];         for(let lvl = start; lvl <= end; lvl++){             let shardsReward = 20 + Math.floor(lvl / 5);             let wordPool = lvl <= 300 ? easyWords : (lvl <= 700 ? medWords : hardWords);             let answer = wordPool[Math.floor(Math.random() * wordPool.length)];             let question = lvl <= 300 ? `المرحلة ${lvl}: استخرج الكلمة البسيطة المرتبطة بالطبيعة:` : (lvl <= 700 ? `المرحلة ${lvl}: كلمة متوسطة الصعوبة، ما هي؟` : `المرحلة ${lvl}: لغز معقد جداً، استخرج الكلمة المخفية!`);                          proms.push(window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+lvl), { num: lvl, world: w.id, q: question, a: answer, shards: shardsReward, img: '' }));                          if (proms.length >= 50) {                 await Promise.all(proms);                 proms = [];             }         }         if(proms.length > 0) await Promise.all(proms);         globalLevel = end + 1;                  if(progBar) progBar.style.width = `${((i+1)/worlds.length)*100}%`;         if(progText) progText.innerText = `تم توليد ${i+1} من ${worlds.length} عوالم...`;     }     if(progEl) progEl.classList.add('hidden');     showToast("تم توليد 10 عوالم و 1000 مرحلة بنجاح ساحق!", "🔥", "success");   } catch(e) {      if(progEl) progEl.classList.add('hidden');     console.log(e); showToast("خطأ أثناء التوليد", "❌", "error");    }function addToFavorites(username) {    if (!currentUser.favorites.includes(username)) {        currentUser.favorites.push(username);        renderFavorites();        alert(`تمت إضافة ${username} إلى قائمة المفضلين.`);    }}async function adminSaveLevel() {   const num = parseInt(document.getElementById('adm-lvl-num').value),          world = document.getElementById('adm-lvl-world').value,          q = document.getElementById('adm-lvl-question').value.trim(),          a = document.getElementById('adm-lvl-answer').value.trim(),          shards = parseInt(document.getElementById('adm-lvl-shards').value),         img = (document.getElementById('adm-lvl-img') ? document.getElementById('adm-lvl-img').value.trim() : '');            if(!num || !world || !q || !a) return showToast("أكمل البيانات", "⚠️", "error");   try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+num), { num, world, q, a, shards, img }); showToast("تم الإضافة", "➕", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }function renderFavorites() {    const favContainer = document.getElementById("favoriteUsers");    favContainer.innerHTML = "";    currentUser.favorites.forEach(fav => {        let div = document.createElement("div");        div.className = "card-box box-rare";        div.innerText = fav;        favContainer.appendChild(div);    });}function updateShopInputPlaceholder() {   const type = document.getElementById('adm-shop-type').value, input = document.getElementById('adm-shop-title');   if(type === 'avatar') input.placeholder = "رابط الصورة (URL) من الإنترنت"; else if(type === 'frame') input.placeholder = "اسم الإطار (ذهبي, ناري, نيون, أسطوري)"; else if(type === 'banner') input.placeholder = "رابط البنر للخلفية (URL)"; else input.placeholder = "اسم اللقب (مثال: قاهر الألغاز)";}// ----------------------------------------------------// وظائف لوحة تحكم المالك (Admin Panel Functions)// ----------------------------------------------------async function adminSaveShopItem() {   const type = document.getElementById('adm-shop-type').value, name = document.getElementById('adm-shop-title').value.trim(), gems = parseInt(document.getElementById('adm-shop-price-gems').value) || 0, shards = parseInt(document.getElementById('adm-shop-price-shards').value) || 0;   if(!name) return showToast("أدخل الاسم أو الرابط", "⚠️", "error");   const id = type + '_' + Date.now();   try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'shop', id), { id, type, name, gems, shards }); showToast("أضيف للمتجر", "✅", "success"); document.getElementById('adm-shop-title').value = ''; } catch(e) { showToast("خطأ", "❌", "error"); }}function adminUpdateStage() {    if (currentUser.role !== "owner") return;    const stageId = document.getElementById("stageIdInput").value;    const xpVal = document.getElementById("stageXpInput").value;    const rewardVal = document.getElementById("stageRewardInput").value;async function adminSaveCrate() {    const name = document.getElementById('adm-crate-name').value.trim(), icon = document.getElementById('adm-crate-icon').value.trim() || '📦', price = parseInt(document.getElementById('adm-crate-price').value), currency = document.getElementById('adm-crate-currency').value, minLevel = parseInt(document.getElementById('adm-crate-minlevel').value) || 1;    if(!name || !price) return showToast("ادخل اسم البكج والسعر", "⚠️", "error");        const drops = [];    for(let i=1; i<=3; i++) {        let type = document.getElementById(`adm-crate-type${i}`).value, val = document.getElementById(`adm-crate-val${i}`).value.trim(), chance = parseInt(document.getElementById(`adm-crate-chance${i}`).value) || 0;        if(val && chance > 0) { drops.push({ type: type, amount: (type === 'shards' || type === 'gems') ? parseInt(val) : null, value: (type === 'title' || type === 'frame') ? val : null, chance: chance }); }    if (!stageId) {        alert("يرجى إدخال رقم المرحلة.");        return;    }    if(drops.length === 0) return showToast("اضف جائزة واحدة على الأقل", "⚠️", "error");        const id = 'crate_' + Date.now();    try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'crates', id), { id, name, icon, price, currency, minLevel, drops }); showToast("تم إنشاء البكج", "📦", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }}function renderAdminCrates() {    const list = document.getElementById('adm-crates-list'); if(!list) return; list.innerHTML = '';    if(dbCrates.length === 0) return list.innerHTML = '<p class="text-xs text-center text-gray-500 py-2">لا توجد بكجات</p>';    dbCrates.forEach(c => { list.innerHTML += `<div class="bg-black/40 border border-white/10 p-2.5 rounded-xl flex items-center justify-between"><div><h4 class="text-xs font-black text-white">${c.icon} ${c.name} <span class="text-yellow-400 text-[8px]">LVL ${c.minLevel||1}</span></h4><span class="text-[10px] text-gray-400">${c.price} ${c.currency === 'gems' ? '💎' : '🧩'}</span></div><button onclick="adminDeleteCrate('${c.id}')" class="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg text-[10px] font-bold">حذف</button></div>`; });}async function adminDeleteCrate(id) {    if(!confirm('حذف هذا البكج نهائياً؟')) return;    try { await window.deleteDoc(window.doc(window.firebaseDb, window.DB_PATH + 'crates', id)); showToast("تم الحذف", "🗑️", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }}function updateCodeItemPlaceholder() {   const type = document.getElementById('adm-code-type').value, input = document.getElementById('adm-code-item');   if(type === 'none') { input.classList.add('hidden'); } else { input.classList.remove('hidden'); if(type === 'avatar') input.placeholder = "رابط الصورة كهدية"; else if(type === 'banner') input.placeholder = "رابط البنر كهدية"; else input.placeholder = `اسم الـ ${type === 'title' ? 'اللقب' : 'الإطار'} الهدية`; }    gameDatabase.stages[stageId] = { xp: xpVal, reward: rewardVal };    alert(`تم تحديث بيانات المرحلة ${stageId} بنجاح: XP = ${xpVal} | الجائزة = ${rewardVal}`);}function adminSearchUsers() {   const q = document.getElementById('adm-search-input').value.trim().toLowerCase(), resDiv = document.getElementById('adm-search-results'); resDiv.innerHTML = '';   if(!q) return; const filtered = allUsers.filter(u => u.name.toLowerCase().includes(q));   if(filtered.length === 0) return resDiv.innerHTML = '<p class="text-xs text-center text-gray-500 py-4">لم يتم العثور</p>';   filtered.forEach(u => resDiv.innerHTML += `<div class="bg-black/40 border border-white/10 p-3 rounded-xl flex items-center justify-between"><div><h4 class="text-xs font-black text-white ${u.isBanned ? 'text-red-500 line-through' : ''}">${u.name}</h4><span class="text-[10px] text-gray-400">مرحلة: ${u.currentLevel} | 🧩 ${u.shards}</span></div><button onclick="openPublicProfile('${u.uid}')" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">ملف/إدارة</button></div>`);}function adminAddStoreItem() {    if (currentUser.role !== "owner") return;    const name = document.getElementById("storeItemNameInput").value;    const price = parseInt(document.getElementById("storeItemPriceInput").value);async function adminCreateCode() {   const code = document.getElementById('adm-code-name').value.trim().toUpperCase(), gems = parseInt(document.getElementById('adm-code-gems').value) || 0, shards = parseInt(document.getElementById('adm-code-shards').value) || 0, itemType = document.getElementById('adm-code-type').value, itemValue = document.getElementById('adm-code-item').value.trim();   if(!code) return showToast("أدخل الرمز", "⚠️", "error"); if(itemType !== 'none' && !itemValue) return showToast("أدخل اسم الهدية أو الرابط", "⚠️", "error");   try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'codes', code), { code, gems, shards, itemType, itemValue, active: true }); showToast("تم إنشاء الكود", "🎁", "success"); document.getElementById('adm-code-name').value = '';} catch(e) { showToast("خطأ", "❌", "error"); }}    if (!name || isNaN(price)) {        alert("يرجى إدخال اسم وسعر صحيح للعنصر.");        return;    }function renderAdminCodes() {   const list = document.getElementById('adm-codes-list'); if(!list) return; list.innerHTML = '';   if(dbCodes.length === 0) return list.innerHTML = '<p class="text-xs text-center text-gray-500 py-2">لا يوجد أكواد</p>';   dbCodes.forEach(c => { list.innerHTML += `<div class="bg-black/40 border ${c.active ? 'border-green-500/30' : 'border-red-500/30'} p-2.5 rounded-xl flex items-center justify-between"><div class="flex-1"><h4 class="text-xs font-black text-white">${c.code} ${c.active ? '✅' : '❌'}</h4><span class="text-[10px] text-gray-400 block mt-0.5">💎 ${c.gems} | 🧩 ${c.shards} ${c.itemType !== 'none' ? '| 🎁 '+c.itemValue : ''}</span></div><button onclick="adminToggleCode('${c.code}', ${!c.active})" class="${c.active ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'} border px-3 py-1.5 rounded-lg text-[10px] font-bold">${c.active ? 'إيقاف' : 'تفعيل'}</button></div>`; });    let newItem = { id: gameDatabase.storeItems.length + 1, name: name, price: price };    gameDatabase.storeItems.push(newItem);    renderStore();    alert(`تمت إضافة العنصر "${name}" إلى المتجر بنجاح وتحديثه للجميع.`);}async function adminToggleCode(code, state) { try { await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'codes', code), { active: state }); showToast("تم التحديث", "✅", "success"); } catch(e) { showToast("خطأ", "❌", "error"); } }async function adminSendGiftToUser(shards, gems) {   if(!viewedUser) return;   try { await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', viewedUser.uid), { shards: viewedUser.shards + shards, gems: viewedUser.gems + gems }); showToast(`تم الإرسال`, "🎁", "success"); } catch(e) { showToast("فشل", "❌", "error"); }function adminRemoveStoreItem() {    if (currentUser.role !== "owner") return;    const name = document.getElementById("storeItemNameInput").value;    gameDatabase.storeItems = gameDatabase.storeItems.filter(item => item.name !== name);    renderStore();    alert(`تم حذف العنصر "${name}" من المتجر بنجاح.`);}async function adminSendMassGift() {   const shards = parseInt(document.getElementById('adm-mass-shards').value) || 0;   const gems = parseInt(document.getElementById('adm-mass-gems').value) || 0;   if(shards === 0 && gems === 0) return showToast("أدخل القيمة", "⚠️", "error");   if(!confirm(`هل أنت متأكد من إرسال ${shards} شظية و ${gems} جوهرة لجميع اللاعبين؟`)) return;      showToast("جاري إرسال الهدية لجميع اللاعبين...", "⏳", "info");   try {       const proms = allUsers.map(u => {           if(u.email !== OWNER_EMAIL) {               return window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', u.uid), {                   shards: (u.shards || 0) + shards,                   gems: (u.gems || 0) + gems               });           }       });       await Promise.all(proms);       showToast("تم إرسال الهدية للجميع بنجاح!", "🎁", "success");       document.getElementById('adm-mass-shards').value = '';       document.getElementById('adm-mass-gems').value = '';   } catch(e) { showToast("حدث خطأ أثناء الإرسال", "❌", "error"); }}function adminCreateCode() {    if (currentUser.role !== "owner") return;    const code = document.getElementById("adminCodeInput").value.trim();    const type = document.getElementById("adminCodeRewardType").value;    const value = document.getElementById("adminCodeValueInput").value.trim();async function adminGiveBadgeToUser() {   if(!viewedUser) return;   const badgeName = document.getElementById('adm-give-badge-name').value.trim();   if(!badgeName) return showToast("أدخل اسم الوسام", "⚠️", "error");   try {        let currentBadges = viewedUser.badges || [];       if(!currentBadges.includes(badgeName)) { currentBadges.push(badgeName); await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', viewedUser.uid), { badges: currentBadges }); showToast(`تم منح الوسام`, "🏅", "success"); document.getElementById('adm-give-badge-name').value = ''; } else { showToast(`يملك هذا الوسام بالفعل`, "⚠️", "error"); }   } catch(e) { showToast("فشل في منح الوسام", "❌", "error"); }}    if (!code || !value) {        alert("يرجى تعبئة الحقول المطلوبة لإنشاء الكود.");        return;    }async function adminBanUser() {   if(!viewedUser) return;   if(confirm(`هل أنت متأكد من حظر حساب اللاعب ${viewedUser.name} بشكل نهائي؟ لن يتمكن من تسجيل الدخول.`)) {       try { await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', viewedUser.uid), { isBanned: true }); showToast("تم حظر اللاعب نهائياً!", "🚫", "success"); goBack(); } catch (e) { showToast("خطأ في الحظر", "❌", "error"); }   }    gameDatabase.customCodes[code] = { type: type, value: value };    alert(`تم إنشاء الكود البرمجي (${code}) بنجاح للمالك واللاعبين!`);}async function adminResetLeaderboard() {   if(confirm("تحذير خطير: هل أنت متأكد من تصفير حسابات جميع اللاعبين إلى المرحلة 1 وصفر نقاط؟")) {      showToast("جاري التصفير...", "⏳", "info");      try { const proms = allUsers.map(u => { if(u.email !== OWNER_EMAIL) return window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', u.uid), { currentLevel: 1, accLevel: 1, shards: 0, gems: 0 }); }); await Promise.all(proms); showToast("تم التصفير بنجاح", "✅", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }   }function adminChangeAppIcon() {    if (currentUser.role !== "owner") return;    const iconUrl = document.getElementById("adminIconUrlInput").value.trim();    if (iconUrl) {        document.getElementById("appIcon").src = iconUrl;        alert("تم تحديث وتغيير أيقونة التطبيق الرئيسية بنجاح.");    }}
-0 commit commentsComments0
+const OWNER_EMAIL = "mohammedabudayya2011@gmail.com";
+let screenHistory = ['home'], allUsers = [], dbWorlds = [], dbLevels = [], dbShopItems = [], dbCodes = [], dbCrates = [];
+window.appSettings = {}; 
+window.isUserBannedLocally = false;
+window.listenersActive = false;
+
+let defaultPlayer = {
+  uid: '', email: '', name: 'زائر', 
+  currentLevel: 1, accLevel: 1, shards: 0, gems: 0,
+  titles: ['مستكشف الألغاز'], equippedTitle: 'مستكشف الألغاز',
+  avatars: ['https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak'], equippedAvatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak',
+  frames: ['بدون إطار'], equippedFrame: 'بدون إطار',
+  banners: ['بدون بنر'], equippedBanner: 'بدون بنر',
+  badges: [], lastDaily: '', isOwner: false, isBanned: false,
+  favorites: []
+};
+let player = JSON.parse(JSON.stringify(defaultPlayer));
+let currentLevelObj = null, currentSlots = [], availableLetters = [];
+
+function isOwner() { return player.email === OWNER_EMAIL; }
+function getDisplayGems() { return isOwner() ? "∞" : player.gems; }
+function getDisplayShards() { return isOwner() ? "∞" : player.shards; }
+
+function calcAccLevel(puzzleStage) { return Math.floor((puzzleStage - 1) / 10) + 1; }
+
+const frameClassesMap = { 'بدون إطار': '', 'ذهبي': 'frame-gold', 'ناري': 'frame-fire', 'نيون': 'frame-neon', 'أسطوري': 'frame-mythic' };
+function getFrameClass(frameName) { return frameClassesMap[frameName] || ''; }
+
+function navigateTo(screenId) {
+  if(window.isUserBannedLocally) return;
+  document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+  document.getElementById(`screen-${screenId}`).classList.remove('hidden');
+  if (screenHistory[screenHistory.length - 1] !== screenId && screenId !== 'splash') screenHistory.push(screenId);
+  updateNavStyles(screenId);
+  
+  if(screenId === 'worlds') renderWorldsGrid();
+  if(screenId === 'leaderboard') renderLeaderboard();
+  if(screenId === 'admin') populateAdminDropdowns();
+  if(screenId === 'shop') renderShopItems();
+  if(screenId === 'crates') renderCrates();
+  if(screenId === 'profile') { calculateProfileRank(); updateUI(); window.updateUIForAuth(); }
+  if(screenId === 'home') { checkDailyReward(); window.updateUIForAuth(); }
+}
+
+function goBack() {
+  if (screenHistory.length > 1) { screenHistory.pop(); navigateTo(screenHistory.pop()); } else { navigateTo('home'); }
+}
+
+function updateNavStyles(activeScreen) {
+  document.querySelectorAll('#bottom-nav button').forEach(btn => { btn.classList.remove('text-brand-500'); btn.classList.add('text-gray-400'); });
+  const activeBtn = document.getElementById(`nav-${activeScreen}`);
+  if (activeBtn) { activeBtn.classList.remove('text-gray-400'); activeBtn.classList.add('text-brand-500'); }
+  if (['splash', 'game', 'admin', 'public-profile'].includes(activeScreen)) { document.getElementById('bottom-nav').classList.add('hidden'); document.getElementById('top-bar').classList.add('hidden'); } else { document.getElementById('bottom-nav').classList.remove('hidden'); document.getElementById('top-bar').classList.remove('hidden'); }
+}
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function openAuthModal() { openModal('modal-auth'); }
+function openRedeemModal() { openModal('modal-redeem'); }
+
+function showToast(msg, icon = '✨', type = 'info') {
+  const toast = document.getElementById('toast-msg');
+  document.getElementById('toast-text').innerText = msg; document.getElementById('toast-icon').innerText = icon;
+  toast.className = 'bg-gray-900/95 text-white border px-4 py-2.5 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2 transform transition-all duration-300 pointer-events-auto z-[100]';
+  if(type === 'error') toast.classList.add('border-red-500'); else if(type === 'success') toast.classList.add('border-green-500'); else toast.classList.add('border-brand-500');
+  toast.classList.remove('-translate-y-10', 'opacity-0');
+  setTimeout(() => { toast.classList.add('-translate-y-10', 'opacity-0'); }, 3000);
+}
+
+let audioCtx = null;
+function playSFX(type) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    
+    if (type === 'click') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.05); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } 
+    else if (type === 'win') { osc.type = 'triangle'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5); osc.start(); osc.stop(audioCtx.currentTime + 0.5); }
+    else if (type === 'wrong') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2); osc.start(); osc.stop(audioCtx.currentTime + 0.2); }
+    else if (type === 'crate_open') { osc.type = 'square'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.setValueAtTime(500, audioCtx.currentTime + 0.3); osc.frequency.setValueAtTime(900, audioCtx.currentTime + 0.7); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.2); osc.start(); osc.stop(audioCtx.currentTime + 1.2); }
+  } catch (e) {}
+}
+
+function getUniqueName(baseName) {
+    let newName = baseName;
+    while(allUsers.some(u => u.name === newName)) { newName = baseName + '_' + Math.floor(Math.random()*9999); }
+    return newName;
+}
+
+window.resetPlayerData = () => { player = JSON.parse(JSON.stringify(defaultPlayer)); updateUI(); };
+
+window.loadPlayerData = async (user) => {
+  try {
+    const userRef = window.doc(window.firebaseDb, window.DB_PATH + 'users', user.uid);
+    const snap = await window.getDoc(userRef);
+    if (snap.exists()) { 
+       const data = snap.data();
+       if(data.isBanned) { window.isUserBannedLocally = true; openModal('modal-banned'); return; }
+       
+       player = { ...defaultPlayer, ...data, uid: user.uid, email: user.email || '' };
+       if(!player.avatars) player.avatars = ['https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak'];
+       if(!player.equippedAvatar) player.equippedAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak';
+       if(!player.frames) player.frames = ['بدون إطار'];
+       if(!player.equippedFrame) player.equippedFrame = 'بدون إطار';
+       if(!player.banners) player.banners = ['بدون بنر'];
+       if(!player.equippedBanner) player.equippedBanner = 'بدون بنر';
+       if(!player.badges) player.badges = [];
+       if(!player.favorites) player.favorites = [];
+       player.accLevel = calcAccLevel(player.currentLevel);
+    } else {
+       let newName = getUniqueName('لاعب');
+       player = { ...defaultPlayer, uid: user.uid, email: user.email || '', name: newName, accLevel: 1 };
+       await window.setDoc(userRef, player);
+    }
+  } catch (error) { 
+      player.uid = user.uid; player.email = user.email || '';
+  }
+  
+  player.isOwner = (player.email === OWNER_EMAIL);
+  updateUI(); 
+  window.updateUIForAuth();
+};
+
+window.setupRealtimeListeners = () => {
+  if(window.listenersActive) return;
+  window.listenersActive = true;
+
+  window.onSnapshot(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), (docSnap) => {
+     if(docSnap.exists()){ window.appSettings = docSnap.data(); applyGlobalSettings(); }
+  });
+
+  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'worlds'), (snap) => {
+    dbWorlds = snap.docs.map(d => d.data()).sort((a,b)=>a.start - b.start);
+    document.getElementById('home-worlds-count').innerText = `${dbWorlds.length} عوالم ساحرة`;
+    document.getElementById('worlds-total-badge').innerText = `${dbWorlds.length} عالم`;
+    if(screenHistory[screenHistory.length-1] === 'worlds') renderWorldsGrid();
+    populateAdminDropdowns();
+  });
+  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'levels'), (snap) => {
+    dbLevels = snap.docs.map(d => d.data()).sort((a,b)=>a.num - b.num);
+  });
+  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'shop'), (snap) => {
+    dbShopItems = snap.docs.map(d => d.data());
+    if(screenHistory[screenHistory.length-1] === 'shop') renderShopItems();
+  });
+  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'crates'), (snap) => {
+    dbCrates = snap.docs.map(d => d.data());
+    if(screenHistory[screenHistory.length-1] === 'crates') renderCrates();
+    if(screenHistory[screenHistory.length-1] === 'admin') renderAdminCrates();
+  });
+  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'codes'), (snap) => {
+    dbCodes = snap.docs.map(d => d.data());
+    if(screenHistory[screenHistory.length-1] === 'admin') renderAdminCodes();
+  });
+  window.onSnapshot(window.collection(window.firebaseDb, window.DB_PATH + 'users'), (snap) => {
+    allUsers = snap.docs.map(d => d.data());
+    if(screenHistory[screenHistory.length-1] === 'leaderboard') renderLeaderboard();
+    if(screenHistory[screenHistory.length-1] === 'profile') calculateProfileRank();
+  });
+  if (player.uid) {
+     window.onSnapshot(window.doc(window.firebaseDb, window.DB_PATH + 'users', player.uid), (docSnap) => {
+        if(docSnap.exists()){
+           const data = docSnap.data(); 
+           if(data.isBanned) { window.isUserBannedLocally = true; openModal('modal-banned'); return; }
+           player.shards = data.shards; player.gems = data.gems; player.currentLevel = data.currentLevel; player.name = data.name; 
+           player.accLevel = calcAccLevel(player.currentLevel);
+           player.titles = data.titles || ['مستكشف الألغاز']; player.equippedTitle = data.equippedTitle || 'مستكشف الألغاز';
+           player.avatars = data.avatars || ['https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak']; player.equippedAvatar = data.equippedAvatar || 'https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak';
+           player.frames = data.frames || ['بدون إطار']; player.equippedFrame = data.equippedFrame || 'بدون إطار';
+           player.banners = data.banners || ['بدون بنر']; player.equippedBanner = data.equippedBanner || 'بدون بنر';
+           player.badges = data.badges || []; player.lastDaily = data.lastDaily || '';
+           player.favorites = data.favorites || [];
+           updateUI(); window.updateUIForAuth();
+        }
+     });
+  }
+};
+
+function applyGlobalSettings() {
+    if(!window.appSettings) return;
+    if(window.appSettings.bgUrl) { document.getElementById('app-container').style.backgroundImage = `url('${window.appSettings.bgUrl}')`; } 
+    else { document.getElementById('app-container').style.backgroundImage = 'none'; }
+    if(window.appSettings.splashTitle) document.getElementById('splash-title').innerText = window.appSettings.splashTitle;
+    if(window.appSettings.splashSub) document.getElementById('splash-subtitle').innerText = window.appSettings.splashSub;
+    
+    const updBanner = document.getElementById('global-update-banner');
+    if(window.appSettings.updateMsg && window.appSettings.updateMsg.trim() !== "") {
+        document.getElementById('global-update-text').innerText = window.appSettings.updateMsg;
+        if(updBanner) updBanner.classList.remove('hidden');
+    } else { if(updBanner) updBanner.classList.add('hidden'); }
+}
+
+window.updateUIForAuth = () => {
+  const guestSec = document.getElementById('auth-guest-section');
+  const loggedSec = document.getElementById('auth-logged-section');
+  const emailText = document.getElementById('profile-email-text');
+  const adminBtn = document.getElementById('owner-admin-btn-container');
+  const homeLoginBanner = document.getElementById('home-login-banner');
+  
+  const currentUser = window.firebaseAuth ? window.firebaseAuth.currentUser : null;
+  const isLogged = currentUser && !currentUser.isAnonymous ? true : false;
+  
+  if (isLogged) {
+      if(guestSec) guestSec.classList.add('hidden');
+      if(loggedSec) loggedSec.classList.remove('hidden');
+      if(emailText) emailText.innerText = currentUser.email || player.name || 'حساب زائر';
+      if(homeLoginBanner) homeLoginBanner.classList.add('hidden');
+      
+      if (currentUser.email === OWNER_EMAIL) {
+          if(adminBtn) adminBtn.classList.remove('hidden');
+          const badge = document.getElementById('header-owner-badge');
+          if(badge) badge.classList.remove('hidden');
+      } else {
+          if(adminBtn) adminBtn.classList.add('hidden');
+          const badge = document.getElementById('header-owner-badge');
+          if(badge) badge.classList.add('hidden');
+      }
+  } else {
+      if(guestSec) guestSec.classList.remove('hidden');
+      if(loggedSec) loggedSec.classList.add('hidden');
+      if(emailText) emailText.innerText = 'غير مسجل';
+      if(homeLoginBanner) homeLoginBanner.classList.remove('hidden');
+      if(adminBtn) adminBtn.classList.add('hidden');
+      const badge = document.getElementById('header-owner-badge');
+      if(badge) badge.classList.add('hidden');
+  }
+};
+
+function updateUI() {
+  player.accLevel = calcAccLevel(player.currentLevel); 
+  
+  document.getElementById('currency-shards').innerText = getDisplayShards(); 
+  document.getElementById('currency-gems').innerText = getDisplayGems();
+  document.getElementById('header-name').innerText = player.name; document.getElementById('header-title').innerHTML = `${player.equippedTitle} <span class="bg-brand-500 text-white text-[8px] px-1 rounded">LVL ${player.accLevel}</span>`;
+  document.getElementById('header-avatar').src = player.equippedAvatar;
+  document.getElementById('header-frame-wrap').className = `relative rounded-full ${getFrameClass(player.equippedFrame)}`;
+  if(player.equippedFrame === 'أسطوري') document.getElementById('header-frame-wrap').classList.add('frame-mythic-wrap');
+
+  document.getElementById('profile-name-text').innerText = player.name; document.getElementById('profile-stat-level').innerText = player.currentLevel;
+  document.getElementById('profile-account-level-txt').innerText = `مستوى الحساب: ${player.accLevel}`;
+  document.getElementById('crate-acc-level').innerText = `مستواك: ${player.accLevel}`;
+  
+  document.getElementById('profile-title-badge').innerText = player.equippedTitle; document.getElementById('profile-avatar-img').src = player.equippedAvatar;
+  document.getElementById('profile-frame-wrap').className = `relative mb-3 group rounded-full ${getFrameClass(player.equippedFrame)}`;
+  if(player.equippedFrame === 'أسطوري') document.getElementById('profile-frame-wrap').classList.add('frame-mythic-wrap');
+  
+  const profileCard = document.getElementById('profile-card-container');
+  if(player.equippedBanner && player.equippedBanner !== 'بدون بنر') {
+      profileCard.style.backgroundImage = `url('${player.equippedBanner}')`;
+      profileCard.style.backgroundSize = 'cover';
+      profileCard.style.backgroundPosition = 'center';
+  } else { profileCard.style.backgroundImage = 'none'; }
+  
+  const badgesContainer = document.getElementById('profile-badges-container');
+  badgesContainer.innerHTML = '';
+  if(player.badges.length > 0) {
+      player.badges.forEach(badge => {
+          let badgeClass = badge.includes('أسطورة') || badge.includes('نادر') ? 'badge-mythic' : 'badge-item';
+          badgesContainer.innerHTML += `<span class="${badgeClass}">${badge}</span>`;
+      });
+  } else { badgesContainer.innerHTML = '<span class="text-[10px] text-gray-500">لا توجد أوسمة بعد</span>'; }
+  
+  const titleSelect = document.getElementById('equip-title-select'); titleSelect.innerHTML = '';
+  player.titles.forEach(t => { titleSelect.innerHTML += `<option value="${t}" ${player.equippedTitle === t ? 'selected' : ''}>${t}</option>`; });
+  
+  const avatarSelect = document.getElementById('equip-avatar-select'); avatarSelect.innerHTML = '';
+  player.avatars.forEach((a, i) => { avatarSelect.innerHTML += `<option value="${a}" ${player.equippedAvatar === a ? 'selected' : ''}>صورة ${i+1}</option>`; });
+
+  const frameSelect = document.getElementById('equip-frame-select'); frameSelect.innerHTML = '';
+  player.frames.forEach((f) => { frameSelect.innerHTML += `<option value="${f}" ${player.equippedFrame === f ? 'selected' : ''}>${f}</option>`; });
+  
+  const bannerSelect = document.getElementById('equip-banner-select'); bannerSelect.innerHTML = '';
+  player.banners.forEach((b, i) => { bannerSelect.innerHTML += `<option value="${b}" ${player.equippedBanner === b ? 'selected' : ''}>${b === 'بدون بنر' ? 'بدون بنر' : 'بنر ' + i}</option>`; });
+}
+
+async function savePlayer() {
+  if(!player.uid) return;
+  try { await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', player.uid), { 
+      name: player.name, currentLevel: player.currentLevel, 
+      shards: isOwner() ? 0 : player.shards, gems: isOwner() ? 0 : player.gems, 
+      equippedTitle: player.equippedTitle, titles: player.titles, 
+      avatars: player.avatars, equippedAvatar: player.equippedAvatar, 
+      frames: player.frames, equippedFrame: player.equippedFrame, 
+      banners: player.banners, equippedBanner: player.equippedBanner, 
+      badges: player.badges, lastDaily: player.lastDaily, isBanned: player.isBanned,
+      favorites: player.favorites
+  }); } catch(e) {}
+}
+
+async function handleEmailLogin() {
+  const email = document.getElementById('auth-email-input').value.trim();
+  const pass = document.getElementById('auth-pass-input').value;
+  if(!email || !pass) return showToast("أدخل البيانات", "⚠️", "error");
+  try { 
+      const cred = await window.signInWithEmailAndPassword(window.firebaseAuth, email, pass); 
+      await window.loadPlayerData(cred.user);
+      window.updateUIForAuth();
+      closeModal('modal-auth'); 
+      showToast("تم تسجيل الدخول", "✅", "success"); 
+  } catch (e) {
+      try { 
+          const cred = await window.createUserWithEmailAndPassword(window.firebaseAuth, email, pass); 
+          await window.loadPlayerData(cred.user);
+          window.updateUIForAuth();
+          closeModal('modal-auth'); 
+          showToast("تم إنشاء حساب جديد بنجاح", "✅", "success"); 
+      } catch(err) { 
+          showToast("الرقم السري خاطئ أو البريد مستخدم", "❌", "error"); 
+      }
+  }
+}
+
+async function handleGoogleLogin() { 
+    try { 
+        const provider = new window.GoogleAuthProvider(); 
+        const cred = await window.signInWithPopup(window.firebaseAuth, provider); 
+        await window.loadPlayerData(cred.user);
+        window.updateUIForAuth();
+        closeModal('modal-auth'); 
+        showToast("تم الدخول بنجاح", "✅", "success"); 
+    } catch(e) { showToast("فشل", "❌", "error"); } 
+}
+
+async function handleFacebookLogin() {
+    try {
+        const provider = new window.FacebookAuthProvider();
+        const cred = await window.signInWithPopup(window.firebaseAuth, provider);
+        await window.loadPlayerData(cred.user);
+        window.updateUIForAuth();
+        closeModal('modal-auth');
+        showToast("تم الدخول بحساب فيسبوك بنجاح", "✅", "success");
+    } catch(e) { showToast("فشل الدخول بفيسبوك", "❌", "error"); }
+}
+
+async function handleAnonymousLogin() { 
+    try { 
+        const cred = await window.signInAnonymously(window.firebaseAuth); 
+        await window.loadPlayerData(cred.user);
+        window.updateUIForAuth();
+        closeModal('modal-auth'); 
+        showToast("دخلت كزائر", "✅", "success"); 
+    } catch(e) { showToast("خطأ", "❌", "error"); } 
+}
+
+async function handleLogout() { try { await window.signOut(window.firebaseAuth); showToast("وداعاً", "👋", "success"); window.location.reload(); } catch(e) {} }
+
+function checkDailyReward() {
+   if(screenHistory[screenHistory.length-1] !== 'home') return;
+   const today = new Date().toDateString();
+   const banner = document.getElementById('daily-reward-banner');
+   if(player.uid && player.lastDaily !== today) { if(banner) banner.classList.remove('hidden'); }
+   else { if(banner) banner.classList.add('hidden'); }
+}
+
+async function claimDailyReward() {
+   if(!player.uid) return showToast("سجل دخولك أولاً", "🔒", "error");
+   const today = new Date().toDateString();
+   if(player.lastDaily === today) return;
+   const isGem = Math.random() > 0.8; 
+   const amount = isGem ? (Math.floor(Math.random() * 6) + 5) : (Math.floor(Math.random() * 21) + 10);
+   if(isGem) player.gems += amount; else player.shards += amount;
+   player.lastDaily = today; await savePlayer();
+   document.getElementById('daily-reward-banner').classList.add('hidden');
+   playSFX('win'); showToast(`استلمت مكافأة يومية: ${amount} ${isGem ? '💎' : '🧩'}`, "🎉", "success");
+   confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+}
+
+function playCurrentLevel() {
+  const lvl = dbLevels.find(l => l.num == player.currentLevel);
+  if(!lvl) return showToast("أنت أسطورة! أنهيت كل المراحل الحالية.", "🚀", "info");
+  loadLevel(lvl); navigateTo('game');
+}
+
+function renderWorldsGrid() {
+   const grid = document.getElementById('worlds-grid'); grid.innerHTML = '';
+   dbWorlds.forEach(w => {
+      const isUnlocked = player.currentLevel >= w.start;
+      const bg = isUnlocked ? 'glass-card border-brand-500/30' : 'bg-black/60 border-gray-800 opacity-70 grayscale';
+      grid.innerHTML += `<div onclick="openWorldLevels('${w.id}')" class="${bg} p-4 rounded-2xl flex items-center justify-between cursor-pointer active:scale-95 transition"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center text-2xl">${w.icon}</div><div><h3 class="text-sm font-black text-white font-messiri">${w.name}</h3><span class="text-[10px] text-gray-400">مراحل ${w.start} - ${w.end}</span></div></div>${!isUnlocked ? '<i class="fa-solid fa-lock text-gray-500"></i>' : '<i class="fa-solid fa-chevron-left text-brand-400"></i>'}</div>`;
+   });
+}
+
+function openWorldLevels(worldId) {
+   const w = dbWorlds.find(x => x.id === worldId); if(!w) return;
+   if(player.currentLevel < w.start) { playSFX('wrong'); return showToast("هذا العالم مغلق بعد!", "🔒", "error"); }
+   document.getElementById('levels-world-title').innerHTML = `${w.name} ${w.icon}`;
+   const grid = document.getElementById('levels-grid'); grid.innerHTML = '';
+   const wLevels = dbLevels.filter(l => l.world === worldId).sort((a,b)=>a.num - b.num);
+   wLevels.forEach(l => {
+      const isUnlocked = player.currentLevel >= l.num; const isPassed = player.currentLevel > l.num;
+      let btnClass = "bg-black/60 border-gray-800 text-gray-500 cursor-not-allowed";
+      if(isPassed) btnClass = "bg-green-900/30 border-green-500/40 text-green-400"; else if(isUnlocked) btnClass = "btn-3d-orange text-white";
+      grid.innerHTML += `<button ${isUnlocked ? `onclick="playSpecificLevel(${l.num})"` : ''} class="${btnClass} h-12 rounded-2xl font-black flex items-center justify-center border text-sm transition">${isUnlocked ? l.num : '<i class="fa-solid fa-lock text-xs"></i>'}</button>`;
+   }); navigateTo('levels');
+}
+
+function playSpecificLevel(num) { const lvl = dbLevels.find(l => l.num == num); if(lvl) { loadLevel(lvl); navigateTo('game'); } }
+
+function loadLevel(lvl) {
+  currentLevelObj = lvl; document.getElementById('game-level-num').innerText = `مرحلة ${lvl.num}`; document.getElementById('game-question-text').innerText = lvl.q;
+  const w = dbWorlds.find(x => x.id === lvl.world); if(w) document.getElementById('game-world-bg-icon').innerText = w.icon;
+  
+  const imgEl = document.getElementById('game-question-img');
+  if(imgEl) {
+      if(lvl.img && lvl.img.trim() !== '') {
+          imgEl.src = lvl.img;
+          imgEl.classList.remove('hidden');
+      } else {
+          imgEl.classList.add('hidden');
+      }
+  }
+
+  currentSlots = Array(lvl.a.length).fill(null);
+  const arabicLetters = 'ابتثجحخدذرزسشصضطظعغفقكلمنهوي'; availableLetters = lvl.a.split('');
+  while(availableLetters.length < 14) availableLetters.push(arabicLetters[Math.floor(Math.random() * arabicLetters.length)]);
+  availableLetters = availableLetters.sort(() => Math.random() - 0.5).map((char, index) => ({ id: index, char: char, used: false }));
+  renderGameUI();
+}
+
+function useHintReveal() {
+  if(player.shards < 15 && !isOwner()) { playSFX('wrong'); return showToast("رصيد الشظايا غير كافِ", "⚠️", "error"); }
+  const emptyIndex = currentSlots.findIndex(s => s === null);
+  if(emptyIndex === -1) return;
+  const correctChar = currentLevelObj.a[emptyIndex];
+  const targetLetter = availableLetters.find(l => !l.used && l.char === correctChar);
+  if(targetLetter) {
+     if(!isOwner()) player.shards -= 15; savePlayer(); updateUI();
+     targetLetter.used = true; currentSlots[emptyIndex] = targetLetter; renderGameUI();
+  }
+}
+function useHintRemoveWrong() {
+   if(player.shards < 10 && !isOwner()) { playSFX('wrong'); return showToast("رصيد الشظايا غير كافِ", "⚠️", "error"); }
+   const wrongLetters = availableLetters.filter(l => !l.used && !currentLevelObj.a.includes(l.char));
+   if(wrongLetters.length > 0) {
+      if(!isOwner()) player.shards -= 10; savePlayer(); updateUI();
+      wrongLetters[0].used = true; renderGameUI();
+   } else showToast("لا يوجد حروف خاطئة زائدة!", "💡", "info");
+}
+function useHintSkip() {
+   if(player.shards < 30 && !isOwner()) { playSFX('wrong'); return showToast("رصيد الشظايا غير كافِ", "⚠️", "error"); }
+   if(!isOwner()) player.shards -= 30; savePlayer(); updateUI();
+   document.getElementById('win-reward-text').innerText = `تم تخطي المرحلة!`;
+   playSFX('win'); openModal('modal-win');
+}
+
+function renderGameUI() {
+  const slotsContainer = document.getElementById('answer-slots-container'); slotsContainer.innerHTML = '';
+  currentSlots.forEach((slot, index) => { slotsContainer.innerHTML += `<div onclick="removeLetterFromSlot(${index})" class="letter-slot shadow-inner">${slot ? slot.char : ''}</div>`; });
+  const poolContainer = document.getElementById('letters-pool-container'); poolContainer.innerHTML = '';
+  availableLetters.forEach(l => { poolContainer.innerHTML += `<button onclick="addLetterToSlot(${l.id})" class="letter-btn ${l.used ? 'hidden-letter' : ''}">${l.char}</button>`; });
+  
+  const isFull = currentSlots.every(s => s !== null);
+  const currentWord = currentSlots.map(s => s ? s.char : '').join('');
+  if (isFull && currentWord !== currentLevelObj.a) { playSFX('wrong'); }
+  checkWin();
+}
+
+function addLetterToSlot(letterId) { playSFX('click'); const emptyIndex = currentSlots.findIndex(s => s === null); if (emptyIndex !== -1) { const l = availableLetters.find(x => x.id === letterId); if(l && !l.used) { l.used = true; currentSlots[emptyIndex] = l; renderGameUI(); } } }
+function removeLetterFromSlot(slotIndex) { const slot = currentSlots[slotIndex]; if (slot) { playSFX('click'); const l = availableLetters.find(x => x.id === slot.id); if(l) l.used = false; currentSlots[slotIndex] = null; renderGameUI(); } }
+function removeLastLetter() { for(let i=currentSlots.length-1; i>=0; i--){ if(currentSlots[i] !== null) { removeLetterFromSlot(i); break; } } }
+function shuffleLetters() { playSFX('click'); availableLetters.sort(() => Math.random() - 0.5); renderGameUI(); }
+
+function checkWin() {
+  const currentWord = currentSlots.map(s => s ? s.char : '').join('');
+  if (currentWord === currentLevelObj.a) {
+    playSFX('win'); confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+    document.getElementById('win-reward-text').innerText = `حصلت على +${currentLevelObj.shards} شظية 🧩`;
+    setTimeout(() => { openModal('modal-win'); }, 500);
+  }
+}
+
+async function nextLevelFromWinModal() {
+  closeModal('modal-win');
+  if (player.currentLevel === currentLevelObj.num) {
+     if(!isOwner()) player.shards += currentLevelObj.shards;
+     player.currentLevel += 1; 
+     player.accLevel = calcAccLevel(player.currentLevel); 
+     await savePlayer();
+     
+     const currentWorld = dbWorlds.find(w => w.id === currentLevelObj.world);
+     if(currentWorld && currentWorld.end == currentLevelObj.num) {
+        let gotTop10 = false;
+        if(!isOwner()) { 
+           player.gems += 100; player.shards += 500;
+           if(currentWorld.rewardTitle && !player.titles.includes(currentWorld.rewardTitle)) {
+               player.titles.push(currentWorld.rewardTitle);
+               player.badges.push('أنهى ' + currentWorld.name); 
+           }
+           let finishers = currentWorld.finishersCount || 0;
+           if(finishers < 10) {
+              gotTop10 = true;
+              if(currentWorld.top10Reward && !player.titles.includes(currentWorld.top10Reward)) {
+                  player.titles.push(currentWorld.top10Reward);
+                  player.badges.push('🏆 أسطورة ' + currentWorld.name); 
+              }
+              await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', currentWorld.id), { finishersCount: finishers + 1 });
+           }
+        }
+        await savePlayer();
+        document.getElementById('world-complete-title-reward').innerText = currentWorld.rewardTitle ? `+ لقب الإتمام: ${currentWorld.rewardTitle}` : '';
+        document.getElementById('world-complete-top10').innerText = gotTop10 ? `🎉 مبروك! أنت من أول 10 أساطير أنهوا العالم! جائزتك: ${currentWorld.top10Reward}` : '';
+        openModal('modal-world-complete'); playSFX('win');
+        return;
+     }
+  }
+  playCurrentLevel();
+}
+function closeWorldCompleteAndGoNext() { closeModal('modal-world-complete'); playCurrentLevel(); }
+
+function renderCrates() {
+    const grid = document.getElementById('crates-grid'); if(!grid) return; grid.innerHTML = '';
+    if(!dbCrates || dbCrates.length === 0) return grid.innerHTML = '<div class="text-center text-gray-400 text-xs py-8">لا توجد بكجات حالياً.</div>';
+    
+    dbCrates.forEach(crate => {
+       const isLocked = player.accLevel < (crate.minLevel || 1);
+       grid.innerHTML += `
+       <div class="glass-card p-4 rounded-3xl border ${isLocked ? 'border-gray-700 opacity-70' : 'border-white/10'} text-center relative overflow-hidden group">
+           ${isLocked ? `<div class="absolute inset-0 bg-black/80 z-20 flex flex-col items-center justify-center"><i class="fa-solid fa-lock text-3xl text-gray-500 mb-2"></i><span class="text-xs font-black text-red-400">يفتح في مستوى ${crate.minLevel}</span></div>` : ''}
+           <div class="text-5xl mb-2 group-hover:scale-110 transition drop-shadow-lg">${crate.icon}</div>
+           <h3 class="text-sm font-black text-amber-300 font-messiri mb-1">${crate.name}</h3>
+           <p class="text-[10px] text-gray-400 mb-3 line-clamp-2">افتح البكج واحصل على جوائز عشوائية نادرة!</p>
+           <button onclick="openCrate('${crate.id}')" class="${crate.currency === 'gems' ? 'btn-3d-purple' : 'btn-3d-orange'} w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2">
+               فتح مقابل ${crate.price} ${crate.currency === 'gems' ? '💎' : '🧩'}
+           </button>
+       </div>`;
+    });
+}
+
+async function openCrate(crateId) {
+    const crate = dbCrates.find(c => c.id === crateId);
+    if (!crate) return;
+    if (!isOwner() && player.accLevel < (crate.minLevel || 1)) { playSFX('wrong'); return showToast(`تحتاج مستوى حساب ${crate.minLevel} للفتح!`, "🔒", "error"); }
+    if (!isOwner() && player[crate.currency] < crate.price) { playSFX('wrong'); return showToast("لا تملك عملات كافية لفتح الصندوق!", "⚠️", "error"); }
+
+    if (!isOwner()) player[crate.currency] -= crate.price;
+    await savePlayer(); updateUI();
+
+    playSFX('crate_open');
+    openModal('modal-crate-open');
+    document.getElementById('crate-shake-icon').innerText = crate.icon;
+    document.getElementById('crate-shake-icon').classList.add('animate-shake-crate');
+    document.getElementById('crate-result-text').classList.add('hidden');
+    document.getElementById('crate-reward-desc').classList.add('hidden');
+    document.getElementById('crate-close-btn').classList.add('hidden');
+
+    setTimeout(async () => {
+        const random = Math.random() * 100;
+        let cumulative = 0; let wonItem = null;
+        for (let drop of crate.drops) {
+            cumulative += drop.chance;
+            if (random <= cumulative) { wonItem = drop; break; }
+        }
+        if(!wonItem) wonItem = crate.drops[0];
+
+        let msg = "";
+        if (wonItem.type === 'shards') { player.shards += wonItem.amount; msg = `+${wonItem.amount} شظية 🧩`; }
+        else if (wonItem.type === 'gems') { player.gems += wonItem.amount; msg = `+${wonItem.amount} جوهرة 💎`; }
+        else if (wonItem.type === 'title') { if(!player.titles.includes(wonItem.value)) player.titles.push(wonItem.value); msg = `لقب جديد: ${wonItem.value} ✨`; }
+        else if (wonItem.type === 'frame') { if(!player.frames.includes(wonItem.value)) player.frames.push(wonItem.value); msg = `إطار جديد: ${wonItem.value} 🖼️`; }
+
+        await savePlayer(); updateUI();
+        
+        document.getElementById('crate-shake-icon').classList.remove('animate-shake-crate');
+        document.getElementById('crate-shake-icon').innerText = '🎉';
+        document.getElementById('crate-result-text').classList.remove('hidden');
+        document.getElementById('crate-reward-desc').innerText = msg;
+        document.getElementById('crate-reward-desc').classList.remove('hidden');
+        document.getElementById('crate-close-btn').classList.remove('hidden');
+        confetti({ particleCount: 200, spread: 90, origin: { y: 0.6 } });
+    }, 1500);
+}
+
+function renderShopItems() {
+   const grid = document.getElementById('shop-items-grid'); if(!grid) return; grid.innerHTML = '';
+   if(!dbShopItems || dbShopItems.length === 0) return grid.innerHTML = '<div class="col-span-2 text-center text-gray-400 text-xs py-8">المتجر فارغ حالياً.</div>';
+   dbShopItems.forEach(item => {
+      let isOwned = false;
+      if(item.type === 'title') isOwned = player.titles.includes(item.name);
+      else if(item.type === 'avatar') isOwned = player.avatars.includes(item.name);
+      else if(item.type === 'frame') isOwned = player.frames.includes(item.name);
+      else if(item.type === 'banner') isOwned = player.banners.includes(item.name);
+
+      let visual = '';
+      if(item.type === 'avatar') visual = `<img src="${item.name}" class="w-12 h-12 rounded-full mb-2 bg-black/50 border border-cyan-500 object-cover"/>`;
+      else if(item.type === 'banner') visual = `<div class="w-full h-12 rounded-xl mb-2 bg-black/50 border border-pink-500 object-cover" style="background-image:url('${item.name}'); background-size:cover; background-position:center;"></div>`;
+      else if(item.type === 'frame') {
+         const cls = getFrameClass(item.name);
+         visual = `<div class="w-12 h-12 rounded-full mb-2 bg-black/50 flex items-center justify-center text-xs ${cls} ${cls===''?'border border-white/20':''} ${item.name==='أسطوري'?'frame-mythic-wrap':''}">🖼️</div><span class="text-xs font-black text-purple-300 mb-2">إطار: ${item.name}</span>`;
+      }
+      else visual = `<span class="text-xs font-black text-brand-300 mb-2">لقب: ${item.name}</span>`;
+
+      grid.innerHTML += `
+         <div class="glass-card p-3 rounded-2xl border ${isOwned ? 'border-green-500/50' : 'border-white/10'} text-center flex flex-col items-center justify-between">
+            ${visual}
+            ${isOwned ? `<span class="text-[10px] text-green-400 font-bold bg-green-500/20 px-2 py-1 rounded-full w-full">مملوك</span>` : 
+            `<div class="flex gap-1 w-full mt-2">
+               ${item.gems > 0 ? `<button onclick="buyShopItem('${item.id}', 'gems', ${item.gems})" class="flex-1 bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 text-[10px] font-bold py-1.5 rounded-lg border border-purple-500/40 transition">${item.gems} 💎</button>` : ''}
+               ${item.shards > 0 ? `<button onclick="buyShopItem('${item.id}', 'shards', ${item.shards})" class="flex-1 bg-brand-600/30 hover:bg-brand-600/50 text-brand-300 text-[10px] font-bold py-1.5 rounded-lg border border-brand-500/40 transition">${item.shards} 🧩</button>` : ''}
+            </div>`}
+         </div>
+      `;
+   });
+}
+
+async function buyShopItem(id, currency, cost) {
+   const item = dbShopItems.find(x => x.id === id); if(!item) return;
+   if(!isOwner() && player[currency] < cost) { playSFX('wrong'); return showToast(`الرصيد غير كافِ`, "⚠️", "error"); }
+   if(!isOwner()) player[currency] -= cost; 
+   if(item.type === 'title') player.titles.push(item.name);
+   else if(item.type === 'avatar') player.avatars.push(item.name);
+   else if(item.type === 'frame') player.frames.push(item.name);
+   else if(item.type === 'banner') player.banners.push(item.name);
+   
+   await savePlayer(); renderShopItems(); showToast(`تم الشراء بنجاح`, "🎉", "success");
+}
+
+function calculateProfileRank() {
+    if(!player.uid) return;
+    const sorted = [...allUsers].sort((a,b) => { if(b.currentLevel === a.currentLevel) return b.shards - a.shards; return b.currentLevel - a.currentLevel; });
+    const rankIndex = sorted.findIndex(u => u.uid === player.uid);
+    const rankSpan = document.getElementById('profile-stat-rank');
+    if(rankIndex !== -1) { rankSpan.innerText = `#${rankIndex + 1}`; rankSpan.classList.add(rankIndex < 3 ? 'text-yellow-400' : 'text-amber-400'); } else { rankSpan.innerText = '-'; }
+}
+
+let currentLeaderboardTab = 'all';
+function switchLeaderboardTab(tab) {
+   currentLeaderboardTab = tab;
+   document.getElementById('btn-lb-all').className = tab === 'all' ? 'bg-brand-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition' : 'bg-black/50 text-gray-400 px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition';
+   document.getElementById('btn-lb-favs').className = tab === 'favs' ? 'bg-brand-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition' : 'bg-black/50 text-gray-400 px-3 py-1.5 rounded-xl text-xs font-bold flex-1 transition';
+   renderLeaderboard();
+}
+
+function renderLeaderboard() {
+   let usersToRender = [...allUsers];
+   if(currentLeaderboardTab === 'favs') {
+       usersToRender = usersToRender.filter(u => player.favorites.includes(u.uid));
+   }
+   const sorted = usersToRender.sort((a,b) => { if(b.currentLevel === a.currentLevel) return b.shards - a.shards; return b.currentLevel - a.currentLevel; }).slice(0, 50);
+   
+   const top3 = document.getElementById('leaderboard-top-3');
+   const list = document.getElementById('leaderboard-list');
+   
+   if (currentLeaderboardTab === 'all') {
+       top3.classList.remove('hidden');
+       top3.innerHTML = '';
+       if(sorted.length >= 2) top3.innerHTML += buildTopCard(sorted[1], '🥈', 'cyan');
+       if(sorted.length >= 1) top3.innerHTML += buildTopCard(sorted[0], '👑', 'yellow', true);
+       if(sorted.length >= 3) top3.innerHTML += buildTopCard(sorted[2], '🥉', 'amber');
+
+       list.innerHTML = '';
+       sorted.slice(3).forEach((u, i) => {
+          const frameCls = getFrameClass(u.equippedFrame);
+          list.innerHTML += `<div onclick="openPublicProfile('${u.uid}')" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-white/5 cursor-pointer hover:bg-white/5"><div class="flex items-center gap-3"><span class="text-xs font-black text-gray-500 w-4">${i+4}</span><div class="relative rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-10 h-10 rounded-full border border-gray-600 bg-game-darkBg object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-[10px] z-20">👑</span>` : ''}</div><div><h4 class="text-xs font-black text-white ${u.email === OWNER_EMAIL ? 'text-amber-400' : ''}">${u.name}</h4><span class="text-[10px] text-brand-400 font-bold">مرحلة ${u.currentLevel}</span></div></div><button class="bg-black/50 text-gray-400 px-2 py-1 rounded-lg text-[10px] border border-white/10 flex gap-1 items-center"><i class="fa-solid fa-eye"></i> زيارة</button></div>`;
+       });
+   } else {
+       top3.classList.add('hidden');
+       list.innerHTML = '';
+       if(sorted.length === 0) return list.innerHTML = '<div class="text-center text-gray-400 text-xs py-8">لا يوجد لاعبين في المفضلة</div>';
+       sorted.forEach((u, i) => {
+          const frameCls = getFrameClass(u.equippedFrame);
+          list.innerHTML += `<div onclick="openPublicProfile('${u.uid}')" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-brand-500/30 cursor-pointer hover:bg-white/5"><div class="flex items-center gap-3"><span class="text-xs font-black text-gray-500 w-4">${i+1}</span><div class="relative rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-10 h-10 rounded-full border border-gray-600 bg-game-darkBg object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-[10px] z-20">👑</span>` : ''}</div><div><h4 class="text-xs font-black text-white ${u.email === OWNER_EMAIL ? 'text-amber-400' : ''}">${u.name}</h4><span class="text-[10px] text-brand-400 font-bold">مرحلة ${u.currentLevel}</span></div></div><button class="bg-black/50 text-gray-400 px-2 py-1 rounded-lg text-[10px] border border-white/10 flex gap-1 items-center"><i class="fa-solid fa-eye"></i> زيارة</button></div>`;
+       });
+   }
+}
+
+function buildTopCard(u, icon, color, isFirst=false) {
+   const frameCls = getFrameClass(u.equippedFrame);
+   return `<div onclick="openPublicProfile('${u.uid}')" class="glass-card${isFirst?'-orange scale-105 shadow-glow-orange border-amber-400 border-2' : ` border border-${color}-500/30`} p-3 rounded-2xl text-center flex flex-col items-center cursor-pointer"><span class="text-${isFirst?'2xl':'lg'} mb-1">${icon}</span><div class="relative mb-1 rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-${isFirst?'12':'10'} h-${isFirst?'12':'10'} rounded-full border border-${color}-400 object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-xs z-20">👑</span>` : ''}</div><span class="text-[11px] font-black text-${isFirst?'yellow-300':'white'} truncate w-full mt-1">${u.name}</span><span class="text-[10px] text-${color}-400 font-bold">مرحلة ${u.currentLevel}</span></div>`;
+}
+
+let viewedUser = null;
+function openPublicProfile(uid) {
+   viewedUser = allUsers.find(u => u.uid === uid); if(!viewedUser) return;
+   document.getElementById('pub-avatar-img').src = viewedUser.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${viewedUser.name}`;
+   document.getElementById('pub-name-text').innerText = viewedUser.name;
+   document.getElementById('pub-title-badge').innerText = viewedUser.equippedTitle || 'مستكشف الألغاز';
+   document.getElementById('pub-stat-level').innerText = viewedUser.currentLevel;
+   document.getElementById('pub-stat-acclvl').innerText = calcAccLevel(viewedUser.currentLevel);
+   document.getElementById('pub-stat-score').innerText = (viewedUser.currentLevel * 100) + viewedUser.shards;
+   
+   const fWrap = document.getElementById('pub-frame-wrap');
+   fWrap.className = `relative mb-3 rounded-full ${getFrameClass(viewedUser.equippedFrame)}`;
+   if(viewedUser.equippedFrame === 'أسطوري') fWrap.classList.add('frame-mythic-wrap');
+
+   const pubBadges = document.getElementById('pub-profile-badges'); pubBadges.innerHTML = '';
+   if(viewedUser.badges && viewedUser.badges.length > 0) {
+       viewedUser.badges.forEach(badge => {
+           let badgeClass = badge.includes('أسطورة') || badge.includes('نادر') ? 'badge-mythic' : 'badge-item';
+           pubBadges.innerHTML += `<span class="${badgeClass}">${badge}</span>`;
+       });
+   } else { pubBadges.innerHTML = '<span class="text-[10px] text-gray-500">لا يملك أوسمة بعد</span>'; }
+
+   if(viewedUser.email === OWNER_EMAIL) { document.getElementById('pub-owner-badge').classList.remove('hidden'); document.getElementById('pub-name-text').classList.add('text-amber-400'); } else { document.getElementById('pub-owner-badge').classList.add('hidden'); document.getElementById('pub-name-text').classList.remove('text-amber-400'); }
+   if(isOwner() && viewedUser.email !== OWNER_EMAIL) document.getElementById('pub-admin-actions').classList.remove('hidden'); else document.getElementById('pub-admin-actions').classList.add('hidden');
+   
+   const favBtn = document.getElementById('pub-fav-btn');
+   if(favBtn) favBtn.innerHTML = player.favorites.includes(viewedUser.uid) ? '<i class="fa-solid fa-heart text-red-500"></i> إزالة' : '<i class="fa-regular fa-heart text-gray-400"></i> مفضلة';
+
+   navigateTo('public-profile');
+}
+
+async function toggleFavoriteUser() {
+    if(!viewedUser || !player.uid) return showToast("سجل الدخول أولاً", "🔒", "error");
+    const idx = player.favorites.indexOf(viewedUser.uid);
+    if(idx === -1) { player.favorites.push(viewedUser.uid); showToast("تم الإضافة للمفضلة", "❤️", "success"); }
+    else { player.favorites.splice(idx, 1); showToast("تم الإزالة من المفضلة", "💔", "info"); }
+    await savePlayer();
+    const favBtn = document.getElementById('pub-fav-btn');
+    if(favBtn) favBtn.innerHTML = player.favorites.includes(viewedUser.uid) ? '<i class="fa-solid fa-heart text-red-500"></i> إزالة' : '<i class="fa-regular fa-heart text-gray-400"></i> مفضلة';
+}
+
+async function changeEquippedTitle(title) { player.equippedTitle = title; await savePlayer(); updateUI(); showToast("تم تغيير اللقب", "✅", "success"); }
+async function changeEquippedAvatar(avatarUrl) { player.equippedAvatar = avatarUrl; await savePlayer(); updateUI(); showToast("تم تغيير الصورة", "✅", "success"); }
+async function changeEquippedFrame(frame) { player.equippedFrame = frame; await savePlayer(); updateUI(); showToast("تم تغيير الإطار", "✅", "success"); }
+async function changeEquippedBanner(banner) { player.equippedBanner = banner; await savePlayer(); updateUI(); showToast("تم تغيير البنر", "✅", "success"); }
+
+async function editProfileName() { 
+    const newName = prompt("أدخل اسمك الجديد (يجب أن يكون غير مستخدم):", player.name); 
+    if(newName && newName.trim().length > 2) { 
+        const nameExists = allUsers.some(u => u.name.toLowerCase() === newName.trim().toLowerCase() && u.uid !== player.uid);
+        if(nameExists) { playSFX('wrong'); return showToast("هذا الاسم مستخدم مسبقاً، يرجى اختيار اسم آخر!", "⚠️", "error"); }
+        player.name = newName.trim(); await savePlayer(); updateUI(); showToast("تم تغيير الاسم بنجاح", "✅", "success"); 
+    } 
+}
+
+async function editProfileAvatarCustom() {
+   const newUrl = prompt("أدخل رابط الصورة (URL) من الإنترنت لتكون صورتك الشخصية:", player.equippedAvatar);
+   if(newUrl && newUrl.trim().length > 5) {
+      player.equippedAvatar = newUrl.trim();
+      if(!player.avatars.includes(newUrl.trim())) player.avatars.push(newUrl.trim());
+      await savePlayer(); updateUI(); showToast("تم تحديث صورتك الشخصية!", "📸", "success");
+   }
+}
+
+function searchPlayersGlobal() {
+   const q = document.getElementById('global-search-input').value.trim().toLowerCase();
+   const resDiv = document.getElementById('global-search-results');
+   const list = document.getElementById('leaderboard-list');
+   const top3 = document.getElementById('leaderboard-top-3');
+   
+   if(!q) { 
+      resDiv.classList.add('hidden'); 
+      list.classList.remove('hidden'); 
+      if(currentLeaderboardTab === 'all') top3.classList.remove('hidden'); 
+      return; 
+   }
+   
+   resDiv.classList.remove('hidden'); list.classList.add('hidden'); top3.classList.add('hidden'); resDiv.innerHTML = '';
+   const filtered = allUsers.filter(u => u.name.toLowerCase().includes(q));
+   
+   if(filtered.length === 0) return resDiv.innerHTML = '<div class="glass-card p-4 text-center text-gray-400 text-xs rounded-2xl">لم يتم العثور على اللاعب.</div>';
+   
+   filtered.forEach((u, i) => {
+      const frameCls = getFrameClass(u.equippedFrame);
+      resDiv.innerHTML += `<div onclick="openPublicProfile('${u.uid}')" class="glass-card p-3 rounded-2xl flex items-center justify-between border border-brand-500/30 cursor-pointer hover:bg-white/5 transition"><div class="flex items-center gap-3"><div class="relative rounded-full ${frameCls} ${u.equippedFrame==='أسطوري'?'frame-mythic-wrap':''}"><img src="${u.equippedAvatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.name}`}" class="w-10 h-10 rounded-full border border-gray-600 bg-game-darkBg object-cover relative z-10" />${u.email === OWNER_EMAIL ? `<span class="absolute -bottom-1 -right-1 text-[10px] z-20">👑</span>` : ''}</div><div><h4 class="text-xs font-black text-white ${u.isBanned ? 'text-red-500 line-through' : ''}">${u.name}</h4><span class="text-[10px] text-brand-400 font-bold">مرحلة ${u.currentLevel}</span></div></div><button class="bg-brand-500/20 text-brand-400 px-3 py-1.5 rounded-xl text-[10px] font-bold flex gap-1 items-center"><i class="fa-solid fa-eye"></i> زيارة</button></div>`;
+   });
+}
+
+async function claimPromoCode() {
+   const codeInput = document.getElementById('redeem-code-input').value.trim().toUpperCase();
+   if(!codeInput) return showToast("أدخل الكود", "⚠️", "error"); if(!player.uid) return showToast("يجب تسجيل الدخول", "🔒", "error");
+   try {
+      const codeRef = window.doc(window.firebaseDb, window.DB_PATH + 'codes', codeInput); const snap = await window.getDoc(codeRef);
+      if(!snap.exists() || !snap.data().active) return showToast("كود غير صالح أو منتهي", "❌", "error");
+      const claimedRef = window.doc(window.firebaseDb, window.DB_PATH + `users/${player.uid}/claimedCodes`, codeInput);
+      if((await window.getDoc(claimedRef)).exists()) return showToast("استخدمت الكود مسبقاً", "⚠️", "error");
+      
+      const data = snap.data(); let msg = "حصلت على: ";
+      if(data.gems > 0) { player.gems += data.gems; msg += `${data.gems}💎 `; }
+      if(data.shards > 0) { player.shards += data.shards; msg += `${data.shards}🧩 `; }
+      if(data.itemType && data.itemValue && data.itemType !== 'none') { 
+         if(data.itemType === 'title' && !player.titles.includes(data.itemValue)) { player.titles.push(data.itemValue); msg += `لقب (${data.itemValue}) `; }
+         if(data.itemType === 'avatar' && !player.avatars.includes(data.itemValue)) { player.avatars.push(data.itemValue); msg += `صورة شخصية جديدة `; }
+         if(data.itemType === 'frame' && !player.frames.includes(data.itemValue)) { player.frames.push(data.itemValue); msg += `إطار (${data.itemValue}) `; }
+         if(data.itemType === 'banner' && !player.banners.includes(data.itemValue)) { player.banners.push(data.itemValue); msg += `بنر خلفية جديد `; }
+      }
+      await savePlayer(); await window.setDoc(claimedRef, { claimedAt: new Date().toISOString() });
+      closeModal('modal-redeem'); showToast(msg, "🎉", "success"); document.getElementById('redeem-code-input').value = ''; confetti(); playSFX('win');
+   } catch(e) { showToast("خطأ", "❌", "error"); }
+}
+
+// ================= لوحة تحكم الإدارة (المالك) =================
+
+function switchAdminTab(tab) {
+   document.querySelectorAll('[id^="admin-sec-"]').forEach(el => el.classList.add('hidden'));
+   document.querySelectorAll('[id^="admintab-"]').forEach(el => el.className = el.id.includes('danger') ? "py-2 px-1 rounded-xl text-red-400" : "py-2 px-1 rounded-xl text-gray-400");
+   document.getElementById(`admin-sec-${tab}`).classList.remove('hidden');
+   const btn = document.getElementById(`admintab-${tab}`);
+   if(tab === 'danger') btn.className = "py-2 px-1 rounded-xl bg-red-600 text-white font-black"; else btn.className = "py-2 px-1 rounded-xl bg-brand-500 text-white font-black";
+   if(tab === 'gift') renderAdminCodes();
+   if(tab === 'crates') renderAdminCrates();
+}
+
+function populateAdminDropdowns() {
+   const sel = document.getElementById('adm-lvl-world'); sel.innerHTML = '';
+   dbWorlds.forEach(w => { sel.innerHTML += `<option value="${w.id}">${w.name} ${w.icon}</option>`; });
+}
+
+async function adminSaveGlobalSettings() {
+    const bg = document.getElementById('adm-setting-bg').value.trim();
+    const splashT = document.getElementById('adm-setting-splash-title').value.trim();
+    const splashS = document.getElementById('adm-setting-splash-sub').value.trim();
+    const updMsg = document.getElementById('adm-setting-update-msg').value.trim();
+    try {
+        await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'settings', 'global'), { bgUrl: bg, splashTitle: splashT, splashSub: splashS, updateMsg: updMsg }, { merge: true });
+        showToast("تم تطبيق التحديثات على جميع اللاعبين!", "🚀", "success");
+    } catch(e) { showToast("خطأ في حفظ الإعدادات", "❌", "error"); }
+}
+
+async function adminGenerateMassiveGame() {
+   if(!confirm("تحذير: سيتم توليد 10 عوالم جديدة وبداخلها 1000 مرحلة تلقائياً. هل أنت متأكد؟")) return;
+   
+   const progEl = document.getElementById('massive-gen-progress-container');
+   const progBar = document.getElementById('massive-gen-progress-bar');
+   const progText = document.getElementById('massive-gen-progress-text');
+   if(progEl) progEl.classList.remove('hidden');
+   showToast("جاري التوليد الشامل... يرجى الانتظار", "⏳", "info");
+   
+   const easyWords = ['قمر','شمس','بحر','نهر','جبل','نجم','سماء','نار','ماء','ثلج','رمل','أسد','نمر','دب','فيل'];
+   const medWords = ['كوكب','محيط','صحراء','غابة','بركان','زلزال','عاصفة','إعصار','جليد','سفينة','طائرة','سيارة','قطار'];
+   const hardWords = ['جاذبية','ديناميكا','فلسفة','تاريخ','جغرافيا','اقتصاد','خوارزمية','إلكترون','مجرة','أكسجين'];
+
+   const worlds = [
+        { id: 'w1', name: 'غابة البداية', icon: '🌲', rewardTitle: 'حارس الغابة', top10Reward: 'أسطورة الغابة' },
+        { id: 'w2', name: 'صحراء الغموض', icon: '🏜️', rewardTitle: 'فارس الصحراء', top10Reward: 'عقرب الرمال' },
+        { id: 'w3', name: 'جبل الجليد', icon: '🏔️', rewardTitle: 'قاهر الصقيع', top10Reward: 'التنين الثلجي' },
+        { id: 'w4', name: 'بركان الغضب', icon: '🌋', rewardTitle: 'سيد النار', top10Reward: 'العنقاء' },
+        { id: 'w5', name: 'أعماق المحيط', icon: '🌊', rewardTitle: 'حاكم البحار', top10Reward: 'لڤياثان' },
+        { id: 'w6', name: 'مدينة السحاب', icon: '☁️', rewardTitle: 'صقر السماء', top10Reward: 'سيد الرياح' },
+        { id: 'w7', name: 'بوابة المجرة', icon: '🌌', rewardTitle: 'رائد الفضاء', top10Reward: 'نجم المجرة' },
+        { id: 'w8', name: 'عالم النيون', icon: '🏙️', rewardTitle: 'المخترق', top10Reward: 'سيد السايبر' },
+        { id: 'w9', name: 'متاهة الزمن', icon: '⏳', rewardTitle: 'حارس الزمن', top10Reward: 'مسافر الزمن' },
+        { id: 'w10', name: 'قلعة الأساطير', icon: '🏰', rewardTitle: 'الأسطورة الخالدة', top10Reward: 'حاكم العوالم' }
+   ];
+   try {
+     let globalLevel = 1;
+     for (let i = 0; i < worlds.length; i++) { 
+         let w = worlds[i]; let start = globalLevel; let end = globalLevel + 99;
+         await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'worlds', w.id), { id: w.id, name: w.name, icon: w.icon, start: start, end: end, rewardTitle: w.rewardTitle, top10Reward: w.top10Reward, finishersCount: 0 });
+         
+         let proms = [];
+         for(let lvl = start; lvl <= end; lvl++){
+             let shardsReward = 20 + Math.floor(lvl / 5);
+             let wordPool = lvl <= 300 ? easyWords : (lvl <= 700 ? medWords : hardWords);
+             let answer = wordPool[Math.floor(Math.random() * wordPool.length)];
+             let question = lvl <= 300 ? `المرحلة ${lvl}: استخرج الكلمة البسيطة المرتبطة بالطبيعة:` : (lvl <= 700 ? `المرحلة ${lvl}: كلمة متوسطة الصعوبة، ما هي؟` : `المرحلة ${lvl}: لغز معقد جداً، استخرج الكلمة المخفية!`);
+             
+             proms.push(window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+lvl), { num: lvl, world: w.id, q: question, a: answer, shards: shardsReward, img: '' }));
+             
+             if (proms.length >= 50) {
+                 await Promise.all(proms);
+                 proms = [];
+             }
+         }
+         if(proms.length > 0) await Promise.all(proms);
+         globalLevel = end + 1;
+         
+         if(progBar) progBar.style.width = `${((i+1)/worlds.length)*100}%`;
+         if(progText) progText.innerText = `تم توليد ${i+1} من ${worlds.length} عوالم...`;
+     }
+     if(progEl) progEl.classList.add('hidden');
+     showToast("تم توليد 10 عوالم و 1000 مرحلة بنجاح ساحق!", "🔥", "success");
+   } catch(e) { 
+     if(progEl) progEl.classList.add('hidden');
+     console.log(e); showToast("خطأ أثناء التوليد", "❌", "error"); 
+   }
+}
+
+async function adminSaveLevel() {
+   const num = parseInt(document.getElementById('adm-lvl-num').value), 
+         world = document.getElementById('adm-lvl-world').value, 
+         q = document.getElementById('adm-lvl-question').value.trim(), 
+         a = document.getElementById('adm-lvl-answer').value.trim(), 
+         shards = parseInt(document.getElementById('adm-lvl-shards').value),
+         img = (document.getElementById('adm-lvl-img') ? document.getElementById('adm-lvl-img').value.trim() : '');
+         
+   if(!num || !world || !q || !a) return showToast("أكمل البيانات", "⚠️", "error");
+   try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'levels', 'lvl_'+num), { num, world, q, a, shards, img }); showToast("تم الإضافة", "➕", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }
+}
+
+function updateShopInputPlaceholder() {
+   const type = document.getElementById('adm-shop-type').value, input = document.getElementById('adm-shop-title');
+   if(type === 'avatar') input.placeholder = "رابط الصورة (URL) من الإنترنت"; else if(type === 'frame') input.placeholder = "اسم الإطار (ذهبي, ناري, نيون, أسطوري)"; else if(type === 'banner') input.placeholder = "رابط البنر للخلفية (URL)"; else input.placeholder = "اسم اللقب (مثال: قاهر الألغاز)";
+}
+
+async function adminSaveShopItem() {
+   const type = document.getElementById('adm-shop-type').value, name = document.getElementById('adm-shop-title').value.trim(), gems = parseInt(document.getElementById('adm-shop-price-gems').value) || 0, shards = parseInt(document.getElementById('adm-shop-price-shards').value) || 0;
+   if(!name) return showToast("أدخل الاسم أو الرابط", "⚠️", "error");
+   const id = type + '_' + Date.now();
+   try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'shop', id), { id, type, name, gems, shards }); showToast("أضيف للمتجر", "✅", "success"); document.getElementById('adm-shop-title').value = ''; } catch(e) { showToast("خطأ", "❌", "error"); }
+}
+
+async function adminSaveCrate() {
+    const name = document.getElementById('adm-crate-name').value.trim(), icon = document.getElementById('adm-crate-icon').value.trim() || '📦', price = parseInt(document.getElementById('adm-crate-price').value), currency = document.getElementById('adm-crate-currency').value, minLevel = parseInt(document.getElementById('adm-crate-minlevel').value) || 1;
+    if(!name || !price) return showToast("ادخل اسم البكج والسعر", "⚠️", "error");
+    
+    const drops = [];
+    for(let i=1; i<=3; i++) {
+        let type = document.getElementById(`adm-crate-type${i}`).value, val = document.getElementById(`adm-crate-val${i}`).value.trim(), chance = parseInt(document.getElementById(`adm-crate-chance${i}`).value) || 0;
+        if(val && chance > 0) { drops.push({ type: type, amount: (type === 'shards' || type === 'gems') ? parseInt(val) : null, value: (type === 'title' || type === 'frame') ? val : null, chance: chance }); }
+    }
+    if(drops.length === 0) return showToast("اضف جائزة واحدة على الأقل", "⚠️", "error");
+    
+    const id = 'crate_' + Date.now();
+    try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'crates', id), { id, name, icon, price, currency, minLevel, drops }); showToast("تم إنشاء البكج", "📦", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }
+}
+
+function renderAdminCrates() {
+    const list = document.getElementById('adm-crates-list'); if(!list) return; list.innerHTML = '';
+    if(dbCrates.length === 0) return list.innerHTML = '<p class="text-xs text-center text-gray-500 py-2">لا توجد بكجات</p>';
+    dbCrates.forEach(c => { list.innerHTML += `<div class="bg-black/40 border border-white/10 p-2.5 rounded-xl flex items-center justify-between"><div><h4 class="text-xs font-black text-white">${c.icon} ${c.name} <span class="text-yellow-400 text-[8px]">LVL ${c.minLevel||1}</span></h4><span class="text-[10px] text-gray-400">${c.price} ${c.currency === 'gems' ? '💎' : '🧩'}</span></div><button onclick="adminDeleteCrate('${c.id}')" class="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg text-[10px] font-bold">حذف</button></div>`; });
+}
+
+async function adminDeleteCrate(id) {
+    if(!confirm('حذف هذا البكج نهائياً؟')) return;
+    try { await window.deleteDoc(window.doc(window.firebaseDb, window.DB_PATH + 'crates', id)); showToast("تم الحذف", "🗑️", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }
+}
+
+function updateCodeItemPlaceholder() {
+   const type = document.getElementById('adm-code-type').value, input = document.getElementById('adm-code-item');
+   if(type === 'none') { input.classList.add('hidden'); } else { input.classList.remove('hidden'); if(type === 'avatar') input.placeholder = "رابط الصورة كهدية"; else if(type === 'banner') input.placeholder = "رابط البنر كهدية"; else input.placeholder = `اسم الـ ${type === 'title' ? 'اللقب' : 'الإطار'} الهدية`; }
+}
+
+function adminSearchUsers() {
+   const q = document.getElementById('adm-search-input').value.trim().toLowerCase(), resDiv = document.getElementById('adm-search-results'); resDiv.innerHTML = '';
+   if(!q) return; const filtered = allUsers.filter(u => u.name.toLowerCase().includes(q));
+   if(filtered.length === 0) return resDiv.innerHTML = '<p class="text-xs text-center text-gray-500 py-4">لم يتم العثور</p>';
+   filtered.forEach(u => resDiv.innerHTML += `<div class="bg-black/40 border border-white/10 p-3 rounded-xl flex items-center justify-between"><div><h4 class="text-xs font-black text-white ${u.isBanned ? 'text-red-500 line-through' : ''}">${u.name}</h4><span class="text-[10px] text-gray-400">مرحلة: ${u.currentLevel} | 🧩 ${u.shards}</span></div><button onclick="openPublicProfile('${u.uid}')" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold">ملف/إدارة</button></div>`);
+}
+
+async function adminCreateCode() {
+   const code = document.getElementById('adm-code-name').value.trim().toUpperCase(), gems = parseInt(document.getElementById('adm-code-gems').value) || 0, shards = parseInt(document.getElementById('adm-code-shards').value) || 0, itemType = document.getElementById('adm-code-type').value, itemValue = document.getElementById('adm-code-item').value.trim();
+   if(!code) return showToast("أدخل الرمز", "⚠️", "error"); if(itemType !== 'none' && !itemValue) return showToast("أدخل اسم الهدية أو الرابط", "⚠️", "error");
+   try { await window.setDoc(window.doc(window.firebaseDb, window.DB_PATH + 'codes', code), { code, gems, shards, itemType, itemValue, active: true }); showToast("تم إنشاء الكود", "🎁", "success"); document.getElementById('adm-code-name').value = '';} catch(e) { showToast("خطأ", "❌", "error"); }
+}
+
+function renderAdminCodes() {
+   const list = document.getElementById('adm-codes-list'); if(!list) return; list.innerHTML = '';
+   if(dbCodes.length === 0) return list.innerHTML = '<p class="text-xs text-center text-gray-500 py-2">لا يوجد أكواد</p>';
+   dbCodes.forEach(c => { list.innerHTML += `<div class="bg-black/40 border ${c.active ? 'border-green-500/30' : 'border-red-500/30'} p-2.5 rounded-xl flex items-center justify-between"><div class="flex-1"><h4 class="text-xs font-black text-white">${c.code} ${c.active ? '✅' : '❌'}</h4><span class="text-[10px] text-gray-400 block mt-0.5">💎 ${c.gems} | 🧩 ${c.shards} ${c.itemType !== 'none' ? '| 🎁 '+c.itemValue : ''}</span></div><button onclick="adminToggleCode('${c.code}', ${!c.active})" class="${c.active ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-green-500/20 text-green-400 border-green-500/30'} border px-3 py-1.5 rounded-lg text-[10px] font-bold">${c.active ? 'إيقاف' : 'تفعيل'}</button></div>`; });
+}
+
+async function adminToggleCode(code, state) { try { await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'codes', code), { active: state }); showToast("تم التحديث", "✅", "success"); } catch(e) { showToast("خطأ", "❌", "error"); } }
+
+async function adminSendGiftToUser(shards, gems) {
+   if(!viewedUser) return;
+   try { await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', viewedUser.uid), { shards: viewedUser.shards + shards, gems: viewedUser.gems + gems }); showToast(`تم الإرسال`, "🎁", "success"); } catch(e) { showToast("فشل", "❌", "error"); }
+}
+
+async function adminSendMassGift() {
+   const shards = parseInt(document.getElementById('adm-mass-shards').value) || 0;
+   const gems = parseInt(document.getElementById('adm-mass-gems').value) || 0;
+   if(shards === 0 && gems === 0) return showToast("أدخل القيمة", "⚠️", "error");
+   if(!confirm(`هل أنت متأكد من إرسال ${shards} شظية و ${gems} جوهرة لجميع اللاعبين؟`)) return;
+   
+   showToast("جاري إرسال الهدية لجميع اللاعبين...", "⏳", "info");
+   try {
+       const proms = allUsers.map(u => {
+           if(u.email !== OWNER_EMAIL) {
+               return window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', u.uid), {
+                   shards: (u.shards || 0) + shards,
+                   gems: (u.gems || 0) + gems
+               });
+           }
+       });
+       await Promise.all(proms);
+       showToast("تم إرسال الهدية للجميع بنجاح!", "🎁", "success");
+       document.getElementById('adm-mass-shards').value = '';
+       document.getElementById('adm-mass-gems').value = '';
+   } catch(e) { showToast("حدث خطأ أثناء الإرسال", "❌", "error"); }
+}
+
+async function adminGiveBadgeToUser() {
+   if(!viewedUser) return;
+   const badgeName = document.getElementById('adm-give-badge-name').value.trim();
+   if(!badgeName) return showToast("أدخل اسم الوسام", "⚠️", "error");
+   try { 
+       let currentBadges = viewedUser.badges || [];
+       if(!currentBadges.includes(badgeName)) { currentBadges.push(badgeName); await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', viewedUser.uid), { badges: currentBadges }); showToast(`تم منح الوسام`, "🏅", "success"); document.getElementById('adm-give-badge-name').value = ''; } else { showToast(`يملك هذا الوسام بالفعل`, "⚠️", "error"); }
+   } catch(e) { showToast("فشل في منح الوسام", "❌", "error"); }
+}
+
+async function adminBanUser() {
+   if(!viewedUser) return;
+   if(confirm(`هل أنت متأكد من حظر حساب اللاعب ${viewedUser.name} بشكل نهائي؟ لن يتمكن من تسجيل الدخول.`)) {
+       try { await window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', viewedUser.uid), { isBanned: true }); showToast("تم حظر اللاعب نهائياً!", "🚫", "success"); goBack(); } catch (e) { showToast("خطأ في الحظر", "❌", "error"); }
+   }
+}
+
+async function adminResetLeaderboard() {
+   if(confirm("تحذير خطير: هل أنت متأكد من تصفير حسابات جميع اللاعبين إلى المرحلة 1 وصفر نقاط؟")) {
+      showToast("جاري التصفير...", "⏳", "info");
+      try { const proms = allUsers.map(u => { if(u.email !== OWNER_EMAIL) return window.updateDoc(window.doc(window.firebaseDb, window.DB_PATH + 'users', u.uid), { currentLevel: 1, accLevel: 1, shards: 0, gems: 0 }); }); await Promise.all(proms); showToast("تم التصفير بنجاح", "✅", "success"); } catch(e) { showToast("خطأ", "❌", "error"); }
+   }
+}
