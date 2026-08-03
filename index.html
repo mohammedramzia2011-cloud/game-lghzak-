@@ -5,23 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>لعبة لغزك - Lghzak</title>
   
-  <!-- خط Cairo والتصميم بواسطة Tailwind CSS -->
+  <!-- الخطوط والتصاميم -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- مكتبات التأثيرات والصوت والـ Confetti -->
+  <!-- مكتبات المؤثرات -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   
   <link rel="stylesheet" href="style.css" />
 </head>
 <body class="bg-slate-950 text-white font-['Cairo'] antialiased select-none overflow-x-hidden min-h-screen">
 
-  <!-- الحاوية الرئيسية للهاتف -->
   <div id="app-container" class="w-full max-w-md mx-auto min-h-screen flex flex-col justify-between relative bg-cover bg-center transition-all duration-500">
     
-    <!-- 🟢 الشريط العلوي (Top Bar) -->
+    <!-- 🟢 الشريط العلوي -->
     <header id="top-bar" class="w-full p-4 flex justify-between items-center z-20 sticky top-0 bg-slate-950/80 backdrop-blur-md border-b border-white/5">
       <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('profile')">
         <div class="relative">
@@ -35,7 +34,6 @@
         </div>
       </div>
 
-      <!-- الرصيد (الشظايا والجواهر) -->
       <div class="flex items-center gap-2">
         <div class="flex items-center gap-1.5 bg-slate-900/90 border border-amber-500/30 px-3 py-1 rounded-2xl shadow-inner">
           <span class="text-sm">🧩</span>
@@ -48,10 +46,10 @@
       </div>
     </header>
 
-    <!-- 📱 منطقة الشاشات (Main Screen Container) -->
+    <!-- 📱 الشاشات -->
     <main class="flex-1 relative flex flex-col">
 
-      <!-- 1️⃣ شاشة البداية (Splash Screen) -->
+      <!-- 1️⃣ شاشة البداية -->
       <section id="screen-splash" class="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
         <div class="w-28 h-28 bg-gradient-to-tr from-cyan-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-cyan-500/40 animate-pulse border-2 border-white/20">
           <span class="text-6xl">🧩</span>
@@ -65,9 +63,8 @@
         </button>
       </section>
 
-      <!-- 2️⃣ الشاشة الرئيسية (Home Screen) -->
+      <!-- 2️⃣ الشاشة الرئيسية -->
       <section id="screen-home" class="hidden flex-1 p-4 pb-24 flex flex-col space-y-4">
-        <!-- بنر الدخول للتسجيل -->
         <div id="home-login-banner" class="glass-card p-4 rounded-3xl border border-amber-500/30 flex justify-between items-center bg-gradient-to-r from-amber-500/10 to-transparent">
           <div>
             <h3 class="text-xs font-bold text-amber-400">سجّل حسابك الآن!</h3>
@@ -76,7 +73,6 @@
           <button onclick="openAuthModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black px-3.5 py-2 rounded-xl">دخول</button>
         </div>
 
-        <!-- زر التحدي الرئيسي -->
         <div class="glass-card p-6 rounded-3xl text-center space-y-4 border border-cyan-500/20 bg-gradient-to-b from-cyan-500/5 to-transparent relative overflow-hidden">
           <div class="text-5xl animate-bounce">🎮</div>
           <div>
@@ -88,7 +84,6 @@
           </button>
         </div>
 
-        <!-- الروابط السريعة -->
         <div class="grid grid-cols-2 gap-3">
           <div onclick="navigateTo('worlds')" class="glass-card p-4 rounded-2xl border border-white/10 flex items-center gap-3 cursor-pointer hover:border-cyan-500/50">
             <span class="text-3xl">🌍</span>
@@ -107,7 +102,6 @@
           </div>
         </div>
 
-        <!-- زر المالك (يظهر للمالك فقط) -->
         <div id="owner-admin-btn-container" class="hidden">
           <button onclick="navigateTo('admin')" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 py-3 rounded-2xl text-xs font-black text-white shadow-lg border border-purple-400/30">
             👑 دخول لوحة تحكم المالك
@@ -115,72 +109,52 @@
         </div>
       </section>
 
-      <!-- 3️⃣ شاشة العوالم (Worlds Grid) -->
+      <!-- 3️⃣ شاشة العوالم -->
       <section id="screen-worlds" class="hidden flex-1 p-4 pb-24 space-y-4">
         <div class="flex justify-between items-center">
           <h2 class="text-base font-black text-white">خريطة العوالم</h2>
           <button onclick="goBack()" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl">رجوع</button>
         </div>
-        <div id="worlds-grid-container" class="grid grid-cols-1 gap-3">
-          <!-- يتم توليد شبكة العوالم تلقائياً عبر JavaScript -->
-        </div>
+        <div id="worlds-grid-container" class="grid grid-cols-1 gap-3"></div>
       </section>
 
-      <!-- 4️⃣ شاشة اللعب والحل (Game Screen) -->
+      <!-- 4️⃣ شاشة اللعب والحل -->
       <section id="screen-game" class="hidden flex-1 p-4 flex flex-col justify-between items-center relative overflow-hidden">
-        <!-- أزرار التحكم والترويسة -->
         <div class="w-full flex justify-between items-center">
           <button onclick="goBack()" class="bg-slate-900/80 p-2.5 rounded-2xl border border-white/10 text-xs">➡️ خروج</button>
           <span id="game-level-num" class="text-sm font-black text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-4 py-1.5 rounded-2xl">مرحلة 1</span>
           <div id="game-world-bg-icon" class="text-2xl">🌲</div>
         </div>
 
-        <!-- صندوق السؤال -->
         <div class="w-full glass-card p-6 rounded-3xl text-center space-y-3 border border-white/10 my-auto shadow-2xl">
-          <h3 id="game-question-text" class="text-base font-bold leading-relaxed text-gray-100">
-            جاري تحميل السؤال...
-          </h3>
+          <h3 id="game-question-text" class="text-base font-bold leading-relaxed text-gray-100">جاري تحميل السؤال...</h3>
         </div>
 
-        <!-- خانات الإجابة وتجميع الحروف -->
         <div class="w-full space-y-6 mb-4">
-          <!-- خانات الأحرف المدخلة -->
-          <div id="answer-slots-container" class="flex flex-wrap justify-center gap-2 dir-rtl">
-            <!-- يتم توليد الخانات عبر JavaScript -->
-          </div>
-
-          <!-- لوحة الأحرف المتاحة للاختيار -->
-          <div id="letters-pool-container" class="grid grid-cols-7 gap-2 max-w-xs mx-auto dir-rtl">
-            <!-- يتم توليد الأحرف عبر JavaScript -->
-          </div>
+          <div id="answer-slots-container" class="flex flex-wrap justify-center gap-2 dir-rtl"></div>
+          <div id="letters-pool-container" class="grid grid-cols-7 gap-2 max-w-xs mx-auto dir-rtl"></div>
         </div>
       </section>
 
-      <!-- 5️⃣ شاشة المتصدرين (Leaderboard Screen) -->
+      <!-- 5️⃣ المتصدرين -->
       <section id="screen-leaderboard" class="hidden flex-1 p-4 pb-24 space-y-4">
         <h2 class="text-base font-black text-white text-center">🏆 قائمة أفضل اللاعبين</h2>
-        <div id="leaderboard-list" class="space-y-2">
-          <!-- يتم ملؤها ديناميكياً -->
-        </div>
+        <div id="leaderboard-list" class="space-y-2"></div>
       </section>
 
-      <!-- 6️⃣ شاشة المتجر (Shop Screen) -->
+      <!-- 6️⃣ المتجر -->
       <section id="screen-shop" class="hidden flex-1 p-4 pb-24 space-y-4">
         <h2 class="text-base font-black text-white">🛍️ متجر العناصر</h2>
-        <div id="shop-items-grid" class="grid grid-cols-2 gap-3">
-          <!-- عناصر المتجر -->
-        </div>
+        <div id="shop-items-grid" class="grid grid-cols-2 gap-3"></div>
       </section>
 
-      <!-- 7️⃣ شاشة الصناديق (Crates Screen) -->
+      <!-- 7️⃣ الصناديق -->
       <section id="screen-crates" class="hidden flex-1 p-4 pb-24 space-y-4">
         <h2 class="text-base font-black text-white">📦 صناديق الحظ</h2>
-        <div id="crates-grid" class="grid grid-cols-1 gap-4">
-          <!-- قائمة الصناديق -->
-        </div>
+        <div id="crates-grid" class="grid grid-cols-1 gap-4"></div>
       </section>
 
-      <!-- 8️⃣ شاشة الملف الشخصي (Profile Screen) -->
+      <!-- 8️⃣ الملف الشخصي -->
       <section id="screen-profile" class="hidden flex-1 p-4 pb-24 space-y-4">
         <div class="glass-card p-6 rounded-3xl text-center space-y-4 border border-white/10">
           <img id="profile-avatar-img" src="https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak" class="w-20 h-20 rounded-full mx-auto border-4 border-cyan-500 shadow-xl object-cover">
@@ -208,14 +182,13 @@
         </div>
       </section>
 
-      <!-- 👑 9️⃣ شاشة لوحة تحكم المالك (Admin Screen) -->
+      <!-- 👑 9️⃣ لوحة تحكم المالك -->
       <section id="screen-admin" class="hidden flex-1 p-4 pb-24 space-y-4">
         <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-purple-500/30">
           <h2 class="text-sm font-black text-amber-400 flex items-center gap-2">👑 لوحة تحكم المالك</h2>
           <button onclick="goBack()" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl">رجوع</button>
         </div>
 
-        <!-- تحكم الإعدادات الضخمة للمالك -->
         <div class="glass-card p-4 rounded-2xl border border-cyan-500/30 space-y-3">
           <h3 class="text-xs font-black text-cyan-400 border-b border-white/10 pb-2">⚙️ إعدادات اللعبة والمكافآت العامة</h3>
           
@@ -254,7 +227,7 @@
 
     </main>
 
-    <!-- 📌 شريط التنقل السفلي (Bottom Navigation) -->
+    <!-- 📌 شريط التنقل السفلي -->
     <nav id="bottom-nav" class="w-full max-w-md fixed bottom-0 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-xl border-t border-white/10 px-4 py-2 flex justify-around items-center z-30">
       <button id="nav-home" onclick="navigateTo('home')" class="flex flex-col items-center text-cyan-500 font-bold text-[10px]">
         <span class="text-xl">🏠</span>
@@ -280,9 +253,7 @@
 
   </div>
 
-  <!-- 🪟 النوافذ المنبثقة (Modals) -->
-
-  <!-- 🎉 نافذة الفوز -->
+  <!-- 🪟 النوافذ المنبثقة -->
   <div id="modal-win" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
     <div class="glass-card w-full max-w-sm rounded-3xl p-6 text-center border border-amber-500/30 space-y-4 animate-pop">
       <div class="text-5xl animate-bounce">🏆</div>
@@ -296,7 +267,6 @@
     </div>
   </div>
 
-  <!-- 🔐 نافذة تسجيل الدخول -->
   <div id="modal-auth" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
     <div class="glass-card w-full max-w-sm rounded-3xl p-6 border border-cyan-500/30 space-y-4 animate-pop">
       <div class="flex justify-between items-center">
@@ -312,7 +282,6 @@
     </div>
   </div>
 
-  <!-- 🎁 نافذة كود الاسترداد -->
   <div id="modal-redeem" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
     <div class="glass-card w-full max-w-sm rounded-3xl p-6 border border-amber-500/30 space-y-4 animate-pop">
       <div class="flex justify-between items-center">
@@ -324,7 +293,6 @@
     </div>
   </div>
 
-  <!-- 🚫 نافذة الحظر -->
   <div id="modal-banned" class="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
     <div class="glass-card w-full max-w-sm rounded-3xl p-6 text-center border border-red-500/50 space-y-4">
       <div class="text-6xl">🚫</div>
@@ -333,11 +301,12 @@
     </div>
   </div>
 
-  <!-- 🔔 التنبيهات السريعة (Toast Notification) -->
   <div id="toast-msg" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white border border-cyan-500 px-4 py-2.5 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2 transition-all duration-300 pointer-events-none z-50 opacity-0 -translate-y-10">
     <span id="toast-icon">✨</span>
     <span id="toast-text">تنبيه</span>
   </div>
 
+  <!-- 🔗 ربط ملف الجافاسكربت الرئيسي -->
+  <script src="app.js"></script>
 </body>
 </html>
