@@ -274,9 +274,9 @@
         <button onclick="closeModal('modal-auth')" class="text-xs text-gray-400">✕</button>
       </div>
       <input type="email" id="auth-email-input" placeholder="البريد الإلكتروني" class="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs text-white" />
-      <input type="password" id="auth-pass-input" placeholder="كلمة المرور" class="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs text-white" />
-      <button onclick="handleEmailLogin()" class="w-full btn-3d-green py-3 rounded-xl text-xs font-black">دخول / تسجيل 🚀</button>
-      <button onclick="handleGoogleLogin()" class="w-full bg-white text-slate-950 font-black py-2.5 rounded-xl text-xs flex items-center justify-center gap-2">
+      <input type="password" id="auth-pass-input" placeholder="كلمة المرور (6 خانات على الأقل)" class="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs text-white" />
+      <button onclick="handleEmailLogin()" class="w-full btn-3d-green py-3 rounded-xl text-xs font-black">دخول / إنشاء حساب تلقائي 🚀</button>
+      <button onclick="handleGoogleLogin()" class="w-full bg-white text-slate-950 font-black py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors">
         <span>الدخول بحساب Google</span>
       </button>
     </div>
@@ -306,7 +306,69 @@
     <span id="toast-text">تنبيه</span>
   </div>
 
-  <!-- 🔗 ربط ملف الجافاسكربت الرئيسي -->
+  <!-- 🔥 ⚡ تهيئة الفايربيس وربط المفاتيح الخاصة بك -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword, 
+      createUserWithEmailAndPassword, 
+      signInWithPopup, 
+      GoogleAuthProvider, 
+      signInAnonymously, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      getDoc, 
+      setDoc, 
+      updateDoc, 
+      onSnapshot, 
+      collection, 
+      query, 
+      orderBy, 
+      limit 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // بيانات الفايربيس الخاصة بمشروعك
+    const firebaseConfig = {
+      apiKey: "AIzaSyCuRvU6LFqDtIAGDbKFqiv4MceF9RXZSmc",
+      authDomain: "lghzak-game.firebaseapp.com",
+      projectId: "lghzak-game",
+      storageBucket: "lghzak-game.firebasestorage.app",
+      messagingSenderId: "1035374695888",
+      appId: "1:1035374695888:web:e022bb94cafd76816c55d5",
+      measurementId: "G-0QYPL62Y8P"
+    };
+
+    // تهيئة الفايربيس وتصدير العناصر للنطاق العام window
+    const app = initializeApp(firebaseConfig);
+    window.firebaseApp = app;
+    window.firebaseAuth = getAuth(app);
+    window.firebaseDb = getFirestore(app);
+
+    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+    window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+    window.signInWithPopup = signInWithPopup;
+    window.GoogleAuthProvider = GoogleAuthProvider;
+    window.signInAnonymously = signInAnonymously;
+    window.signOut = signOut;
+    window.onAuthStateChanged = onAuthStateChanged;
+
+    window.doc = doc;
+    window.getDoc = getDoc;
+    window.setDoc = setDoc;
+    window.updateDoc = updateDoc;
+    window.onSnapshot = onSnapshot;
+    window.collection = collection;
+    window.query = query;
+    window.orderBy = orderBy;
+    window.limit = limit;
+  </script>
+
+  <!-- 🔗 ربط ملف الجافاسكربت الرئيسي للعبة -->
   <script src="app.js"></script>
 </body>
 </html>
