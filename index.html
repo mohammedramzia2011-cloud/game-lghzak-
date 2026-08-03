@@ -81,14 +81,14 @@
           <div class="text-5xl animate-bounce">🎮</div>
           <div>
             <h2 class="text-lg font-black text-white">المغامرة بانتظارك</h2>
-            <p id="home-worlds-count" class="text-xs text-cyan-400 mt-1">10 عوالم ساحرة</p>
+            <p id="home-worlds-count" class="text-xs text-cyan-400 mt-1">تحديات لا تنتهي</p>
           </div>
           <button onclick="playCurrentLevel()" class="w-full btn-3d-green py-4 rounded-2xl text-base font-black text-white shadow-lg">
             ▶️ واصل اللعب
           </button>
         </div>
 
-        <!-- خانة استخدام الأكواد للمستخدمين -->
+        <!-- خانة استخدام الأكواد -->
         <div class="glass-card p-4 rounded-2xl border border-white/10 flex gap-2 items-center">
           <input type="text" id="redeem-code-input" placeholder="أدخل كود الهدية..." class="flex-1 bg-black/60 border border-white/20 rounded-xl p-2.5 text-xs text-white uppercase" />
           <button onclick="redeemCode()" class="bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 px-4 py-2.5 rounded-xl text-xs font-black">استخدام 🎁</button>
@@ -99,22 +99,22 @@
             <span class="text-3xl">🌍</span>
             <div>
               <h4 class="text-xs font-bold">العوالم</h4>
-              <span class="text-[10px] text-gray-400">10 عوالم</span>
+              <span class="text-[10px] text-gray-400">خريطة العوالم</span>
             </div>
           </div>
 
           <div onclick="navigateTo('crates')" class="glass-card p-4 rounded-2xl border border-amber-500/30 flex items-center gap-3 cursor-pointer hover:border-amber-500/70 bg-amber-500/5">
             <span class="text-3xl">📦</span>
             <div>
-              <h4 class="text-xs font-bold text-amber-400">الصناديق</h4>
-              <span class="text-[10px] text-gray-400">صناديق الحظ</span>
+              <h4 class="text-xs font-bold text-amber-400">المتجر والصناديق</h4>
+              <span class="text-[10px] text-gray-400">مكافآت وحظ</span>
             </div>
           </div>
         </div>
 
         <div id="owner-admin-btn-container" class="hidden">
           <button onclick="navigateTo('admin')" class="w-full bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 py-3.5 rounded-2xl text-xs font-black text-slate-950 shadow-xl border border-amber-300">
-            👑 دخول لوحة تحكم المالك الشاملة (OWNER)
+            👑 لوحة تحكم المالك الشاملة (OWNER)
           </button>
         </div>
       </section>
@@ -146,7 +146,7 @@
         </div>
       </section>
 
-      <!-- 5️⃣ شاشة البحث عن اللاعبين -->
+      <!-- 5️⃣ شاشة البحث -->
       <section id="screen-search" class="hidden flex-1 p-4 pb-24 space-y-4">
         <div class="flex justify-between items-center">
           <h2 class="text-base font-black text-white flex items-center gap-2">🔍 البحث عن لاعبين</h2>
@@ -158,18 +158,16 @@
           <span class="absolute left-3 top-3.5 text-gray-400 text-sm">🔍</span>
         </div>
 
-        <div id="search-results-list" class="space-y-2">
-          <div class="text-center text-xs text-gray-400 py-8">ابحث عن أي لاعب للوصول لبروفايله أو إضافته للمفضلة ⭐</div>
-        </div>
+        <div id="search-results-list" class="space-y-2"></div>
       </section>
 
-      <!-- 📦 6️⃣ شاشة الصناديق (Crates) -->
+      <!-- 📦 6️⃣ شاشة الصناديق والمتجر -->
       <section id="screen-crates" class="hidden flex-1 p-4 pb-24 space-y-4">
         <div class="flex justify-between items-center">
-          <h2 class="text-base font-black text-amber-400 flex items-center gap-2">📦 صناديق الحظ والمكافآت</h2>
+          <h2 class="text-base font-black text-amber-400 flex items-center gap-2">📦 المتجر وصناديق الحظ</h2>
           <button onclick="goBack()" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl">رجوع</button>
         </div>
-        <p class="text-xs text-gray-400">افتح الصناديق وانسخ المكافآت والشظايا الأسطورية!</p>
+        <p class="text-xs text-gray-400">افتح الصناديق واحصل على الشظايا والجواهر!</p>
         <div id="crates-grid" class="grid grid-cols-1 gap-4"></div>
       </section>
 
@@ -228,70 +226,57 @@
           <button onclick="goBack()" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl">رجوع</button>
         </div>
 
-        <!-- 1. إرسال هدايا للجميع أو شخص معين -->
+        <!-- 🛒 1. التحكم بمنتجات المتجر والصناديق (إضافة وحذف) -->
         <div class="glass-card p-4 rounded-2xl border border-amber-500/30 space-y-3">
-          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">🎁 إرسال هدايا ومكافآت</h3>
-          
+          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">🛍️ إدارة المتجر وصناديق الحظ</h3>
           <div class="grid grid-cols-2 gap-2">
-            <input type="number" id="adm-gift-shards" placeholder="عدد الشظايا 🧩" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
-            <input type="number" id="adm-gift-gems" placeholder="عدد الجواهر 💎" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            <input type="text" id="adm-crate-name" placeholder="اسم الصندوق/المنتج" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            <input type="text" id="adm-crate-icon" placeholder="الأيقونة (مثلاً 🎁)" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            <input type="number" id="adm-crate-cost" placeholder="السعر بالجواهر 💎" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            <input type="number" id="adm-crate-reward" placeholder="المكافأة بالشظايا 🧩" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
           </div>
-
-          <button onclick="adminSendGiftToAll()" class="w-full bg-amber-500 text-slate-950 py-2.5 rounded-xl text-xs font-black">
-            📢 إرسال الهدية لجميع اللاعبين الآن
+          <button onclick="adminAddCrate()" class="w-full btn-3d-green py-2.5 rounded-xl text-xs font-black">
+            ➕ إضافة منتج/صندوق للمتجر
           </button>
-
-          <div class="border-t border-white/10 pt-3 space-y-2">
-            <input type="text" id="adm-gift-target-uid" placeholder="UID أو اسم اللاعب المحدّد..." class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
-            <button onclick="adminSendGiftToSpecificUser()" class="w-full bg-cyan-600 text-white py-2.5 rounded-xl text-xs font-black">
-              🎯 إرسال هدية للاعب معين فقط
-            </button>
-          </div>
+          <div id="adm-crates-manage-list" class="space-y-2 pt-2 border-t border-white/10"></div>
         </div>
 
-        <!-- 2. إنشاء الأكواد والصناديق -->
+        <!-- 🌍 2. إدارة العوالم والمراحل (إضافة وحذف فردي أو مسح كامل) -->
         <div class="glass-card p-4 rounded-2xl border border-amber-500/30 space-y-3">
-          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">🏷️ إنشاء كود هدية جديد</h3>
-          <div class="grid grid-cols-2 gap-2">
-            <input type="text" id="adm-code-text" placeholder="الكود (مثلاً: KING2026)" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white uppercase" />
-            <input type="number" id="adm-code-shards" placeholder="الشظايا 🧩" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
-          </div>
-          <button onclick="adminCreatePromoCode()" class="w-full btn-3d-green py-2.5 rounded-xl text-xs font-black">
-            ➕ إضافة كود الهدية للجميع
-          </button>
-        </div>
-
-        <!-- 3. تغيير التصميم وشاشة التحميل الأحداث -->
-        <div class="glass-card p-4 rounded-2xl border border-amber-500/30 space-y-3">
-          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">🎨 تخصيص المظهر وشاشة التحميل والأحداث</h3>
+          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">🗺️ إضافة/حذف العوالم والمراحل</h3>
           
+          <!-- إضافة عالم -->
           <div class="space-y-2">
-            <label class="text-[10px] text-gray-300">عنوان اللعبة وشاشة التحميل:</label>
-            <input type="text" id="adm-splash-title-input" placeholder="لغزك" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            <span class="text-[10px] text-gray-300 font-bold block">إضافة عالم جديد:</span>
+            <div class="grid grid-cols-3 gap-2">
+              <input type="number" id="adm-world-num" placeholder="رقم العالم" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+              <input type="text" id="adm-world-name" placeholder="اسم العالم" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+              <input type="text" id="adm-world-icon" placeholder="الأيقونة 🌲" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            </div>
+            <button onclick="adminAddWorld()" class="w-full bg-cyan-600 text-white py-2 rounded-xl text-xs font-black">➕ إضافة عالم</button>
           </div>
 
-          <div class="space-y-2">
-            <label class="text-[10px] text-gray-300">رابط صورة شاشة التحميل (Splash Logo):</label>
-            <input type="text" id="adm-splash-img-input" placeholder="https://..." class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+          <!-- إضافة مرحلة -->
+          <div class="space-y-2 border-t border-white/10 pt-2">
+            <span class="text-[10px] text-gray-300 font-bold block">إضافة مرحلة جديدة:</span>
+            <div class="grid grid-cols-3 gap-2">
+              <input type="number" id="adm-level-num" placeholder="رقم المرحلة" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+              <input type="text" id="adm-level-q" placeholder="السؤال" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+              <input type="text" id="adm-level-a" placeholder="الإجابة" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            </div>
+            <button onclick="adminAddLevel()" class="w-full bg-cyan-600 text-white py-2 rounded-xl text-xs font-black">➕ إضافة مرحلة</button>
           </div>
 
-          <div class="space-y-2">
-            <label class="text-[10px] text-gray-300">رابط خلفية التطبيق العامة:</label>
-            <input type="text" id="adm-bg-url-input" placeholder="https://..." class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+          <!-- مسح جماعي -->
+          <div class="border-t border-white/10 pt-2 grid grid-cols-2 gap-2">
+            <button onclick="adminDeleteAllWorlds()" class="bg-red-600/30 border border-red-500/50 text-red-300 py-2 rounded-xl text-[10px] font-black">🗑️ مسح كل العوالم</button>
+            <button onclick="adminDeleteAllLevels()" class="bg-red-600/30 border border-red-500/50 text-red-300 py-2 rounded-xl text-[10px] font-black">🗑️ مسح كل المراحل</button>
           </div>
-
-          <button onclick="adminSaveDesignAndSplash()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-black">
-            💾 حفظ المظهر وشاشة التحميل
-          </button>
-
-          <button onclick="adminTriggerEventUpdate()" class="w-full bg-gradient-to-r from-red-600 to-orange-600 text-white py-2.5 rounded-xl text-xs font-black shadow-lg animate-pulse">
-            ⚡ إطلاق تحديث إجباري وقوي للأحداث فوراً
-          </button>
         </div>
 
-        <!-- 4. توليد العوالم والمراحل مع العداد -->
+        <!-- ⚡ 3. توليد ضخم (10 عوالم و 1000 مرحلة) مع العداد التفاعلي -->
         <div class="glass-card p-4 rounded-2xl border border-amber-500/30 space-y-3">
-          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">🔥 توليد العوالم والمراحل (10 عوالم)</h3>
+          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">🔥 التوليد التلقائي الشامل (مع العداد الحي)</h3>
           
           <div id="admin-progress-box" class="hidden space-y-2 bg-black/60 p-3 rounded-xl border border-cyan-500/40">
             <div class="flex justify-between text-[11px] font-bold text-cyan-400">
@@ -304,9 +289,63 @@
           </div>
 
           <button onclick="adminGenerateMassiveGameWithProgress()" class="w-full btn-3d-orange py-3 rounded-xl text-xs font-black text-white">
-            🚀 بدء توليد 10 عوالم (1000 مرحلة) مع العداد
+            🚀 بدء توليد 10 عوالم (1000 مرحلة) مع العداد المباشر
           </button>
         </div>
+
+        <!-- 🎁 4. إرسال الهدايا والأكواد -->
+        <div class="glass-card p-4 rounded-2xl border border-amber-500/30 space-y-3">
+          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">🎁 إرسال الهدايا والأكواد</h3>
+          
+          <div class="grid grid-cols-2 gap-2">
+            <input type="number" id="adm-gift-shards" placeholder="عدد الشظايا 🧩" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            <input type="number" id="adm-gift-gems" placeholder="عدد الجواهر 💎" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+          </div>
+
+          <button onclick="adminSendGiftToAll()" class="w-full bg-amber-500 text-slate-950 py-2.5 rounded-xl text-xs font-black">
+            📢 إرسال الهدية لجميع اللاعبين
+          </button>
+
+          <div class="border-t border-white/10 pt-2 space-y-2">
+            <input type="text" id="adm-gift-target-uid" placeholder="UID أو اسم اللاعب..." class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+            <button onclick="adminSendGiftToSpecificUser()" class="w-full bg-cyan-600 text-white py-2 rounded-xl text-xs font-black">
+              🎯 إرسال هدية للاعب معين
+            </button>
+          </div>
+
+          <div class="border-t border-white/10 pt-2 grid grid-cols-2 gap-2">
+            <input type="text" id="adm-code-text" placeholder="الكود (مثلاً: KING)" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white uppercase" />
+            <input type="number" id="adm-code-shards" placeholder="الشظايا 🧩" class="bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+          </div>
+          <button onclick="adminCreatePromoCode()" class="w-full btn-3d-green py-2 rounded-xl text-xs font-black">
+            ➕ إضافة كود هدية
+          </button>
+        </div>
+
+        <!-- 🎨 5. تخصيص المظهر، الخلفية العامة، وشاشة التحميل -->
+        <div class="glass-card p-4 rounded-2xl border border-amber-500/30 space-y-3">
+          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">🎨 تخصيص خلفية التطبيق والمظهر</h3>
+          
+          <div class="space-y-2">
+            <label class="text-[10px] text-gray-300">عنوان شاشة التحميل:</label>
+            <input type="text" id="adm-splash-title-input" placeholder="لغزك" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-[10px] text-gray-300">رابط صورة شاشة التحميل (Logo):</label>
+            <input type="text" id="adm-splash-img-input" placeholder="https://..." class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+          </div>
+
+          <div class="space-y-2">
+            <label class="text-[10px] text-gray-300">رابط خلفية تطبيق اللعبة بالكامل:</label>
+            <input type="text" id="adm-bg-url-input" placeholder="https://..." class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
+          </div>
+
+          <button onclick="adminSaveDesignAndSplash()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-black">
+            💾 حفظ الخلفية والمظهر للجميع
+          </button>
+        </div>
+
       </section>
 
     </main>
@@ -319,7 +358,7 @@
       </button>
       <button id="nav-crates" onclick="navigateTo('crates')" class="flex flex-col items-center text-gray-400 font-bold text-[10px]">
         <span class="text-xl">📦</span>
-        <span>الصناديق</span>
+        <span>المتجر</span>
       </button>
       <button id="nav-search" onclick="navigateTo('search')" class="flex flex-col items-center text-gray-400 font-bold text-[10px]">
         <span class="text-xl">🔍</span>
@@ -416,7 +455,7 @@
       signInWithPopup, GoogleAuthProvider, signInAnonymously, signOut, onAuthStateChanged 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { 
-      getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, limit, writeBatch 
+      getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, orderBy, limit, getDocs
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -446,12 +485,13 @@
     window.getDoc = getDoc;
     window.setDoc = setDoc;
     window.updateDoc = updateDoc;
+    window.deleteDoc = deleteDoc;
     window.onSnapshot = onSnapshot;
     window.collection = collection;
     window.query = query;
     window.orderBy = orderBy;
     window.limit = limit;
-    window.writeBatch = writeBatch;
+    window.getDocs = getDocs;
   </script>
 
   <script src="app.js"></script>
