@@ -5,13 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>لعبة لغزك - Lghzak</title>
   
-  <!-- الخطوط والتصاميم -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- مكتبات المؤثرات -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   
   <link rel="stylesheet" href="style.css" />
@@ -23,11 +20,15 @@
     <!-- 🟢 الشريط العلوي -->
     <header id="top-bar" class="w-full p-4 flex justify-between items-center z-20 sticky top-0 bg-slate-950/80 backdrop-blur-md border-b border-white/5">
       <div class="flex items-center gap-3 cursor-pointer" onclick="navigateTo('profile')">
-        <div class="relative">
+        <div class="relative" id="header-avatar-container">
           <img id="header-avatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-cyan-500 bg-slate-800 object-cover shadow-lg">
+          <span id="header-owner-crown" class="hidden absolute -top-2 -right-1 text-xs animate-bounce">👑</span>
         </div>
         <div class="flex flex-col">
-          <span id="header-name" class="text-xs font-black text-white truncate max-w-[100px]">لاعب</span>
+          <div class="flex items-center gap-1.5">
+            <span id="header-name" class="text-xs font-black text-white truncate max-w-[100px]">لاعب</span>
+            <span id="header-owner-badge" class="hidden owner-tag text-[8px] px-1.5 py-0.5 rounded font-black">OWNER</span>
+          </div>
           <span id="header-title" class="text-[10px] text-gray-400 flex items-center gap-1">
             مستكشف الألغاز <span class="bg-cyan-500 text-white text-[8px] px-1 rounded font-bold">LVL 1</span>
           </span>
@@ -93,18 +94,18 @@
             </div>
           </div>
 
-          <div onclick="openRedeemModal()" class="glass-card p-4 rounded-2xl border border-white/10 flex items-center gap-3 cursor-pointer hover:border-amber-500/50">
-            <span class="text-3xl">🎁</span>
+          <div onclick="navigateTo('search')" class="glass-card p-4 rounded-2xl border border-cyan-500/30 flex items-center gap-3 cursor-pointer hover:border-cyan-500/70 bg-cyan-500/5">
+            <span class="text-3xl">🔍</span>
             <div>
-              <h4 class="text-xs font-bold">كود الهدية</h4>
-              <span class="text-[10px] text-amber-400">استلم الجوائز</span>
+              <h4 class="text-xs font-bold text-cyan-400">البحث</h4>
+              <span class="text-[10px] text-gray-400">ابحث عن لاعبين</span>
             </div>
           </div>
         </div>
 
         <div id="owner-admin-btn-container" class="hidden">
-          <button onclick="navigateTo('admin')" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 py-3 rounded-2xl text-xs font-black text-white shadow-lg border border-purple-400/30">
-            👑 دخول لوحة تحكم المالك
+          <button onclick="navigateTo('admin')" class="w-full bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-500 py-3 rounded-2xl text-xs font-black text-slate-950 shadow-xl border border-amber-300">
+            👑 دخول لوحة تحكم المالك (OWNER)
           </button>
         </div>
       </section>
@@ -136,32 +137,58 @@
         </div>
       </section>
 
-      <!-- 5️⃣ المتصدرين -->
+      <!-- 5️⃣ شاشة البحث عن اللاعبين -->
+      <section id="screen-search" class="hidden flex-1 p-4 pb-24 space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-base font-black text-white flex items-center gap-2">🔍 البحث عن لاعبين</h2>
+          <button onclick="goBack()" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl">رجوع</button>
+        </div>
+
+        <div class="relative">
+          <input type="text" id="player-search-input" oninput="handleSearchPlayers()" placeholder="اكتب اسم اللاعب..." class="w-full bg-slate-900 border border-cyan-500/30 rounded-2xl p-3.5 pr-10 text-xs text-white focus:outline-none focus:border-cyan-500" />
+          <span class="absolute left-3 top-3.5 text-gray-400 text-sm">🔍</span>
+        </div>
+
+        <div id="search-results-list" class="space-y-2">
+          <div class="text-center text-xs text-gray-400 py-8">ابحث عن أي لاعب للوصول لبروفايله أو إضافته للمفضلة ⭐</div>
+        </div>
+      </section>
+
+      <!-- 6️⃣ المتصدرين -->
       <section id="screen-leaderboard" class="hidden flex-1 p-4 pb-24 space-y-4">
         <h2 class="text-base font-black text-white text-center">🏆 قائمة أفضل اللاعبين</h2>
         <div id="leaderboard-list" class="space-y-2"></div>
       </section>
 
-      <!-- 6️⃣ المتجر -->
+      <!-- 7️⃣ المتجر -->
       <section id="screen-shop" class="hidden flex-1 p-4 pb-24 space-y-4">
         <h2 class="text-base font-black text-white">🛍️ متجر العناصر</h2>
         <div id="shop-items-grid" class="grid grid-cols-2 gap-3"></div>
       </section>
 
-      <!-- 7️⃣ الصناديق -->
+      <!-- 8️⃣ الصناديق -->
       <section id="screen-crates" class="hidden flex-1 p-4 pb-24 space-y-4">
         <h2 class="text-base font-black text-white">📦 صناديق الحظ</h2>
         <div id="crates-grid" class="grid grid-cols-1 gap-4"></div>
       </section>
 
-      <!-- 8️⃣ الملف الشخصي -->
+      <!-- 9️⃣ الملف الشخصي -->
       <section id="screen-profile" class="hidden flex-1 p-4 pb-24 space-y-4">
-        <div class="glass-card p-6 rounded-3xl text-center space-y-4 border border-white/10">
-          <img id="profile-avatar-img" src="https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak" class="w-20 h-20 rounded-full mx-auto border-4 border-cyan-500 shadow-xl object-cover">
-          <div>
-            <h2 id="profile-display-name" class="text-lg font-black">لاعب</h2>
-            <p id="profile-email-text" class="text-xs text-gray-400">زائر</p>
+        <div id="profile-card-container" class="glass-card p-6 rounded-3xl text-center space-y-4 border border-white/10 relative overflow-hidden">
+          <div class="relative inline-block">
+            <img id="profile-avatar-img" src="https://api.dicebear.com/7.x/bottts/svg?seed=Lghzak" class="w-20 h-20 rounded-full mx-auto border-4 border-cyan-500 shadow-xl object-cover">
+            <span id="profile-owner-crown" class="hidden absolute -top-3 -right-2 text-2xl animate-bounce">👑</span>
           </div>
+
+          <div>
+            <div class="flex items-center justify-center gap-2">
+              <h2 id="profile-display-name" class="text-lg font-black">لاعب</h2>
+              <button onclick="openChangeNameModal()" class="text-xs text-cyan-400 hover:underline">✏️ تعديل</button>
+            </div>
+            <span id="profile-owner-tag" class="hidden owner-tag text-[9px] px-2 py-0.5 rounded font-black inline-block mt-1">OWNER 👑</span>
+            <p id="profile-email-text" class="text-xs text-gray-400 mt-1">زائر</p>
+          </div>
+
           <div class="flex justify-around bg-black/40 p-3 rounded-2xl border border-white/5">
             <div>
               <span class="block text-[10px] text-gray-400">المرحلة الحالية</span>
@@ -174,6 +201,14 @@
           </div>
         </div>
 
+        <!-- قائمة اللاعبين المفضلين -->
+        <div class="glass-card p-4 rounded-3xl border border-amber-500/20 space-y-3">
+          <h3 class="text-xs font-black text-amber-400 flex items-center gap-1.5">⭐ القائمة المفضلة</h3>
+          <div id="favorites-list-container" class="space-y-2">
+            <p class="text-[11px] text-gray-400 text-center py-2">لا يوجد لاعبين في المفضلة حالياً</p>
+          </div>
+        </div>
+
         <div id="auth-guest-section" class="space-y-2">
           <button onclick="openAuthModal()" class="w-full btn-3d-green py-3 rounded-2xl text-xs font-black">تسجيل الدخول / إنشاء حساب 🔐</button>
         </div>
@@ -182,15 +217,15 @@
         </div>
       </section>
 
-      <!-- 👑 9️⃣ لوحة تحكم المالك -->
+      <!-- 👑 🔟 لوحة تحكم المالك -->
       <section id="screen-admin" class="hidden flex-1 p-4 pb-24 space-y-4">
-        <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-purple-500/30">
-          <h2 class="text-sm font-black text-amber-400 flex items-center gap-2">👑 لوحة تحكم المالك</h2>
+        <div class="flex justify-between items-center bg-slate-900 p-4 rounded-2xl border border-amber-500/50">
+          <h2 class="text-sm font-black text-amber-400 flex items-center gap-2">👑 لوحة تحكم المالك (OWNER)</h2>
           <button onclick="goBack()" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl">رجوع</button>
         </div>
 
-        <div class="glass-card p-4 rounded-2xl border border-cyan-500/30 space-y-3">
-          <h3 class="text-xs font-black text-cyan-400 border-b border-white/10 pb-2">⚙️ إعدادات اللعبة والمكافآت العامة</h3>
+        <div class="glass-card p-4 rounded-2xl border border-amber-500/30 space-y-3">
+          <h3 class="text-xs font-black text-amber-400 border-b border-white/10 pb-2">⚙️ إعدادات اللعبة العامة</h3>
           
           <div class="space-y-2">
             <label class="text-[10px] text-gray-300">رابط صورة الخلفية العامة:</label>
@@ -202,24 +237,13 @@
             <input type="text" id="adm-setting-splash-title" placeholder="لغزك" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-white" />
           </div>
 
-          <div class="flex gap-2">
-            <div class="flex-1 space-y-1">
-              <label class="text-[10px] text-gray-300">مكافأة الشظايا:</label>
-              <input type="number" id="adm-setting-reward-shards" value="5" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-amber-400 font-bold" />
-            </div>
-            <div class="flex-1 space-y-1">
-              <label class="text-[10px] text-gray-300">مكافأة الـ XP:</label>
-              <input type="number" id="adm-setting-reward-xp" value="20" class="w-full bg-black/60 border border-white/20 rounded-xl p-2 text-xs text-purple-400 font-bold" />
-            </div>
-          </div>
-
           <button onclick="adminSaveGlobalSettings()" class="w-full btn-3d-green py-2.5 rounded-xl text-xs font-black text-white">
             حفظ الإعدادات والمكافآت 🚀
           </button>
 
           <div class="pt-2 border-t border-white/10">
             <button onclick="adminGenerateMassiveGame()" class="w-full btn-3d-orange py-2.5 rounded-xl text-xs font-black text-white">
-              توليد 10 عوالم (1000 مرحلة متدرجة الصعوبة) 🔥
+              توليد 10 عوالم (1000 مرحلة) 🔥
             </button>
           </div>
         </div>
@@ -233,6 +257,10 @@
         <span class="text-xl">🏠</span>
         <span>الرئيسية</span>
       </button>
+      <button id="nav-search" onclick="navigateTo('search')" class="flex flex-col items-center text-gray-400 font-bold text-[10px]">
+        <span class="text-xl">🔍</span>
+        <span>البحث</span>
+      </button>
       <button id="nav-worlds" onclick="navigateTo('worlds')" class="flex flex-col items-center text-gray-400 font-bold text-[10px]">
         <span class="text-xl">🗺️</span>
         <span>العوالم</span>
@@ -241,19 +269,65 @@
         <span class="text-xl">🏆</span>
         <span>المتصدرين</span>
       </button>
-      <button id="nav-shop" onclick="navigateTo('shop')" class="flex flex-col items-center text-gray-400 font-bold text-[10px]">
-        <span class="text-xl">🛍️</span>
-        <span>المتجر</span>
-      </button>
-      <button id="nav-crates" onclick="navigateTo('crates')" class="flex flex-col items-center text-gray-400 font-bold text-[10px]">
-        <span class="text-xl">📦</span>
-        <span>الصناديق</span>
+      <button id="nav-profile" onclick="navigateTo('profile')" class="flex flex-col items-center text-gray-400 font-bold text-[10px]">
+        <span class="text-xl">👤</span>
+        <span>حسابي</span>
       </button>
     </nav>
 
   </div>
 
-  <!-- 🪟 النوافذ المنبثقة -->
+  <!-- 🪟 النوافذ المنبثقة (Modals) -->
+  
+  <!-- نافذة معاينة بروفايل لاعب آخر -->
+  <div id="modal-user-profile" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
+    <div id="inspect-card-box" class="glass-card w-full max-w-sm rounded-3xl p-6 text-center space-y-4 border border-cyan-500/30 animate-pop relative">
+      <button onclick="closeModal('modal-user-profile')" class="absolute top-4 left-4 text-xs text-gray-400">✕</button>
+      
+      <div class="relative inline-block">
+        <img id="inspect-avatar" src="" class="w-20 h-20 rounded-full mx-auto border-4 border-cyan-500 shadow-xl object-cover">
+        <span id="inspect-owner-crown" class="hidden absolute -top-3 -right-2 text-2xl animate-bounce">👑</span>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-center gap-1.5">
+          <h2 id="inspect-name" class="text-lg font-black text-white">لاعب</h2>
+          <span id="inspect-owner-badge" class="hidden owner-tag text-[8px] px-1.5 py-0.5 rounded font-black">OWNER</span>
+        </div>
+        <p id="inspect-title" class="text-xs text-gray-400 mt-0.5">مستكشف الألغاز</p>
+      </div>
+
+      <div class="flex justify-around bg-black/40 p-3 rounded-2xl border border-white/5">
+        <div>
+          <span class="block text-[10px] text-gray-400">المرحلة الحالية</span>
+          <span id="inspect-level" class="text-base font-black text-cyan-400">1</span>
+        </div>
+        <div>
+          <span class="block text-[10px] text-gray-400">الشظايا 🧩</span>
+          <span id="inspect-shards" class="text-base font-black text-amber-400">0</span>
+        </div>
+      </div>
+
+      <button id="inspect-fav-btn" onclick="toggleFavoriteCurrentInspected()" class="w-full btn-3d-orange py-3 rounded-2xl text-xs font-black">
+        ⭐ إضافة إلى المفضلة
+      </button>
+    </div>
+  </div>
+
+  <!-- نافذة تغير اسم المستخدم -->
+  <div id="modal-change-name" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
+    <div class="glass-card w-full max-w-sm rounded-3xl p-6 border border-cyan-500/30 space-y-4 animate-pop">
+      <div class="flex justify-between items-center">
+        <h3 class="text-sm font-black text-cyan-400">تغيير اسم المستخدم</h3>
+        <button onclick="closeModal('modal-change-name')" class="text-xs text-gray-400">✕</button>
+      </div>
+      <p class="text-[11px] text-gray-300">يجب أن يكون اسمك فريداً وغير مكرر مع أي لاعب آخر.</p>
+      <input type="text" id="new-name-input" placeholder="أدخل الاسم الجديد..." class="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs text-white" />
+      <button onclick="saveNewUsername()" class="w-full btn-3d-green py-3 rounded-xl text-xs font-black">حفظ الاسم 🚀</button>
+    </div>
+  </div>
+
+  <!-- باقي النوافذ المعتادة -->
   <div id="modal-win" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
     <div class="glass-card w-full max-w-sm rounded-3xl p-6 text-center border border-amber-500/30 space-y-4 animate-pop">
       <div class="text-5xl animate-bounce">🏆</div>
@@ -282,31 +356,12 @@
     </div>
   </div>
 
-  <div id="modal-redeem" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
-    <div class="glass-card w-full max-w-sm rounded-3xl p-6 border border-amber-500/30 space-y-4 animate-pop">
-      <div class="flex justify-between items-center">
-        <h3 class="text-sm font-black text-amber-400">استرداد كود الهدية 🎁</h3>
-        <button onclick="closeModal('modal-redeem')" class="text-xs text-gray-400">✕</button>
-      </div>
-      <input type="text" id="redeem-code-input" placeholder="أدخل الكود هنا..." class="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-xs text-white text-center font-bold" />
-      <button onclick="handleRedeemCode()" class="w-full btn-3d-orange py-3 rounded-xl text-xs font-black">استلام المكافأة 🎉</button>
-    </div>
-  </div>
-
-  <div id="modal-banned" class="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
-    <div class="glass-card w-full max-w-sm rounded-3xl p-6 text-center border border-red-500/50 space-y-4">
-      <div class="text-6xl">🚫</div>
-      <h2 class="text-xl font-black text-red-500">تم حظر حسابك</h2>
-      <p class="text-xs text-gray-300">تم تقييد حسابك لمخالفة قوانين اللعبة.</p>
-    </div>
-  </div>
-
   <div id="toast-msg" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white border border-cyan-500 px-4 py-2.5 rounded-2xl shadow-2xl text-xs font-bold flex items-center gap-2 transition-all duration-300 pointer-events-none z-50 opacity-0 -translate-y-10">
     <span id="toast-icon">✨</span>
     <span id="toast-text">تنبيه</span>
   </div>
 
-  <!-- 🔥 ⚡ تهيئة الفايربيس وربط المفاتيح الخاصة بك -->
+  <!-- Firebase Integration -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { 
@@ -332,7 +387,6 @@
       limit 
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // بيانات الفايربيس الخاصة بمشروعك
     const firebaseConfig = {
       apiKey: "AIzaSyCuRvU6LFqDtIAGDbKFqiv4MceF9RXZSmc",
       authDomain: "lghzak-game.firebaseapp.com",
@@ -343,7 +397,6 @@
       measurementId: "G-0QYPL62Y8P"
     };
 
-    // تهيئة الفايربيس وتصدير العناصر للنطاق العام window
     const app = initializeApp(firebaseConfig);
     window.firebaseApp = app;
     window.firebaseAuth = getAuth(app);
@@ -368,7 +421,6 @@
     window.limit = limit;
   </script>
 
-  <!-- 🔗 ربط ملف الجافاسكربت الرئيسي للعبة -->
   <script src="app.js"></script>
 </body>
 </html>
