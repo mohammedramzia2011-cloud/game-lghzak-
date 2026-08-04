@@ -1,38 +1,117 @@
-body { font-family: 'Cairo', sans-serif; }
-.font-messiri { font-family: 'El Messiri', sans-serif; }
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=El+Messiri:wght@600;700&display=swap');
 
-/* تأثير الزجاج والخلفيات */
-.glass-card { background: rgba(25, 15, 35, 0.6); backdrop-filter: blur(12px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1); }
-.glass-card-orange { background: rgba(249, 115, 22, 0.15); backdrop-filter: blur(12px); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1); }
+body {
+  font-family: 'Cairo', sans-serif;
+  background-color: #f97316; /* لون برتقالي للخلفية العامة */
+  margin: 0;
+  padding: 0;
+  color: #1f2937;
+}
 
-/* الأزرار ثلاثية الأبعاد */
-.btn-3d-orange { background: linear-gradient(to bottom, #fb923c, #ea580c); box-shadow: 0 4px 0 #9a3412, 0 5px 10px rgba(0,0,0,0.5); transition: all 0.1s; }
-.btn-3d-orange:active { transform: translateY(4px); box-shadow: 0 0 0 #9a3412, 0 2px 5px rgba(0,0,0,0.5); }
+.font-messiri {
+  font-family: 'El Messiri', sans-serif;
+}
 
-.btn-3d-purple { background: linear-gradient(to bottom, #a855f7, #7e22ce); box-shadow: 0 4px 0 #581c87, 0 5px 10px rgba(0,0,0,0.5); transition: all 0.1s; }
-.btn-3d-purple:active { transform: translateY(4px); box-shadow: 0 0 0 #581c87, 0 2px 5px rgba(0,0,0,0.5); }
+/* تصميم البطاقات الزجاجية باللون الأبيض والبرتقالي */
+.glass-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.1);
+  border-radius: 1.5rem;
+  color: #1f2937;
+}
 
-.btn-3d-green { background: linear-gradient(to bottom, #4ade80, #16a34a); box-shadow: 0 4px 0 #14532d, 0 5px 10px rgba(0,0,0,0.5); transition: all 0.1s; }
-.btn-3d-green:active { transform: translateY(4px); box-shadow: 0 0 0 #14532d, 0 2px 5px rgba(0,0,0,0.5); }
+.glass-card-orange {
+  background: linear-gradient(135deg, #ea580c, #f97316);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 15px rgba(234, 88, 12, 0.4);
+}
 
-/* تأثيرات الإطارات */
-.frame-gold { box-shadow: 0 0 10px #ffd700, inset 0 0 10px #ffd700; border: 2px solid #ffd700; }
-.frame-fire { box-shadow: 0 0 15px #ff4500, inset 0 0 10px #ff4500; border: 2px solid #ff4500; animation: flicker 1.5s infinite alternate; }
-.frame-neon { box-shadow: 0 0 15px #00ffff, inset 0 0 10px #00ffff; border: 2px solid #00ffff; }
-.frame-mythic-wrap::before { content: ''; absolute; inset: -4px; background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000); background-size: 400%; z-index: 0; border-radius: 50%; animation: mythic-glow 20s linear infinite; }
-.frame-mythic-wrap img { position: relative; z-index: 10; border: 2px solid transparent; }
+/* أزرار 3D برتقالية */
+.btn-3d-orange {
+  background: linear-gradient(to bottom, #f97316, #ea580c);
+  color: #ffffff;
+  box-shadow: 0 4px 0 #c2410c, 0 5px 10px rgba(0,0,0,0.15);
+  transition: all 0.15s ease;
+  border: none;
+}
 
-/* أنيميشنز (حركات اللعبة) */
-@keyframes flicker { 0% { box-shadow: 0 0 5px #ff4500; } 100% { box-shadow: 0 0 20px #ff4500; } }
-@keyframes mythic-glow { 0% { background-position: 0 0; } 50% { background-position: 400% 0; } 100% { background-position: 0 0; } }
-@keyframes shake { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-5px) rotate(-5deg); } 75% { transform: translateX(5px) rotate(5deg); } }
-.animate-shake-crate { animation: shake 0.3s ease-in-out infinite; }
-.animate-float { animation: float 3s ease-in-out infinite; }
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.btn-3d-orange:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #c2410c;
+}
 
-/* أزرار الحروف */
-.letter-slot { width: 35px; height: 35px; background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 18px; font-weight: 900; color: #fb923c; cursor: pointer; transition: 0.2s; }
-.letter-btn { width: 35px; height: 35px; background: linear-gradient(to bottom, #4b5563, #374151); border-bottom: 3px solid #1f2937; border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 16px; font-weight: 900; color: white; cursor: pointer; transition: 0.1s; }
-.letter-btn:active { transform: translateY(3px); border-bottom-width: 0px; }
-.hidden-letter { opacity: 0; pointer-events: none; }
-.dir-rtl { direction: rtl; }
+.btn-3d-green {
+  background: linear-gradient(to bottom, #22c55e, #16a34a);
+  color: #ffffff;
+  box-shadow: 0 4px 0 #15803d, 0 5px 10px rgba(0,0,0,0.15);
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.btn-3d-green:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 #15803d;
+}
+
+/* تنسيق خانات الحروف */
+.letter-slot {
+  width: 40px;
+  height: 40px;
+  background-color: #ffffff;
+  border: 2px solid #fb923c;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.25rem;
+  color: #ea580c;
+  cursor: pointer;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.letter-btn {
+  width: 35px;
+  height: 35px;
+  background: linear-gradient(to bottom, #fff7ed, #ffedd5);
+  border: 1px solid #fdba74;
+  border-radius: 0.5rem;
+  font-weight: 800;
+  color: #c2410c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #fb923c;
+  transition: all 0.1s;
+}
+
+.letter-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 0 0 #fb923c;
+}
+
+.hidden-letter {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dir-rtl {
+  direction: rtl;
+}
+
+/* الأوسمة والإطارات */
+.frame-gold { border: 3px solid #fbbf24; box-shadow: 0 0 10px #fbbf24; }
+.frame-fire { border: 3px solid #ef4444; box-shadow: 0 0 10px #ef4444; }
+.frame-neon { border: 3px solid #06b6d4; box-shadow: 0 0 10px #06b6d4; }
+.frame-mythic-wrap {
+  padding: 4px;
+  background: linear-gradient(45deg, #fbbf24, #ef4444, #a855f7);
+  animation: mythic-spin 3s linear infinite;
+}
+
+@keyframes mythic-spin {
+  100% { filter: hue-rotate(360deg); }
+}
